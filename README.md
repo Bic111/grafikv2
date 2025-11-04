@@ -57,32 +57,4 @@ Projekt wykorzystuje najnowsze wersje Next.js z App Routerem oraz React 19 z Ser
 
 Strony znajdują się w katalogu `src/app/` i automatycznie aktualizują się podczas edycji.
 
-## 🤖 Integracja Specify → Claude (CLI wrapper)
-
-W repo jest prosty wrapper PowerShell do wywołań Claude przez API:
-
-```bash
-npm run ask:claude -- -Prompt "Napisz haiku o jesieni"
-```
-
-Możesz też wczytać prompt z pliku lub STDIN:
-
-```bash
-# z pliku
-npm run ask:claude -- -File ./prompt.txt -Model claude-3-7-sonnet-latest
-
-# przez STDIN (Windows PowerShell)
-Get-Content .\prompt.txt | npm run ask:claude --
-```
-
-Wymagany jest klucz API:
-
-```powershell
-# tymczasowo (tylko bieżąca sesja)
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
-
-# trwale dla użytkownika
-[Environment]::SetEnvironmentVariable("ANTHROPIC_API_KEY", "sk-ant-...", "User")
-```
-
-Skrypt znajduje się w `.specify/scripts/powershell/claude-ask.ps1` i używa endpointu `/v1/messages` z nagłówkiem `anthropic-version: 2023-06-01`.
+ 

@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "ask:claude": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./.specify/scripts/powershell/claude-ask.ps1"
+    "lint": "eslint"
   },
   "dependencies": {
     "react": "19.2.0",
