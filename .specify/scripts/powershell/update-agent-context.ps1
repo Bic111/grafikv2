@@ -117,7 +117,7 @@ function Test-Environment {
     }
 }
 
-function Extract-PlanField {
+function Get-PlanField {
     param(
         [Parameter(Mandatory=$true)]
         [string]$FieldPattern,
@@ -135,17 +135,17 @@ function Extract-PlanField {
     } | Select-Object -First 1
 }
 
-function Parse-PlanData {
+function Read-PlanData {
     param(
         [Parameter(Mandatory=$true)]
         [string]$PlanFile
     )
     if (-not (Test-Path $PlanFile)) { Write-Err "Plan file not found: $PlanFile"; return $false }
     Write-Info "Parsing plan data from $PlanFile"
-    $script:NEW_LANG        = Extract-PlanField -FieldPattern 'Language/Version' -PlanFile $PlanFile
-    $script:NEW_FRAMEWORK   = Extract-PlanField -FieldPattern 'Primary Dependencies' -PlanFile $PlanFile
-    $script:NEW_DB          = Extract-PlanField -FieldPattern 'Storage' -PlanFile $PlanFile
-    $script:NEW_PROJECT_TYPE = Extract-PlanField -FieldPattern 'Project Type' -PlanFile $PlanFile
+    $script:NEW_LANG        = Get-PlanField -FieldPattern 'Language/Version' -PlanFile $PlanFile
+    $script:NEW_FRAMEWORK   = Get-PlanField -FieldPattern 'Primary Dependencies' -PlanFile $PlanFile
+    $script:NEW_DB          = Get-PlanField -FieldPattern 'Storage' -PlanFile $PlanFile
+    $script:NEW_PROJECT_TYPE = Get-PlanField -FieldPattern 'Project Type' -PlanFile $PlanFile
 
     if ($NEW_LANG) { Write-Info "Found language: $NEW_LANG" } else { Write-WarningMsg 'No language information found in plan' }
     if ($NEW_FRAMEWORK) { Write-Info "Found framework: $NEW_FRAMEWORK" }
@@ -290,7 +290,7 @@ function Update-ExistingAgentFile {
 
     $lines = Get-Content -LiteralPath $TargetFile -Encoding utf8
     $output = New-Object System.Collections.Generic.List[string]
-    $inTech = $false; $inChanges = $false; $techAdded = $false; $changeAdded = $false; $existingChanges = 0
+    $inTech = $false; $inChanges = $false; $techAdded = $false; $existingChanges = 0
 
     for ($i=0; $i -lt $lines.Count; $i++) {
         $line = $lines[$i]
@@ -309,7 +309,7 @@ function Update-ExistingAgentFile {
         }
         if ($line -eq '## Recent Changes') {
             $output.Add($line)
-            if ($newChangeEntry) { $output.Add($newChangeEntry); $changeAdded = $true }
+            if ($newChangeEntry) { $output.Add($newChangeEntry) }
             $inChanges = $true
             continue
         }
@@ -408,7 +408,7 @@ function Update-AllExistingAgents {
     return $ok
 }
 
-function Print-Summary {
+function Show-Summary {
     Write-Host ''
     Write-Info 'Summary of changes:'
     if ($NEW_LANG) { Write-Host "  - Added language: $NEW_LANG" }
@@ -421,7 +421,7 @@ function Print-Summary {
 function Main {
     Test-Environment
     Write-Info "=== Updating agent context files for feature $CURRENT_BRANCH ==="
-    if (-not (Parse-PlanData -PlanFile $NEW_PLAN)) { Write-Err 'Failed to parse plan data'; exit 1 }
+    if (-not (Read-PlanData -PlanFile $NEW_PLAN)) { Write-Err 'Failed to parse plan data'; exit 1 }
     $success = $true
     if ($AgentType) {
         Write-Info "Updating specific agent: $AgentType"
@@ -431,7 +431,7 @@ function Main {
         Write-Info 'No agent specified, updating all existing agent files...'
         if (-not (Update-AllExistingAgents)) { $success = $false }
     }
-    Print-Summary
+    Show-Summary
     if ($success) { Write-Success 'Agent context update completed successfully'; exit 0 } else { Write-Err 'Agent context update completed with errors'; exit 1 }
 }
 
