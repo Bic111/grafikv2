@@ -43,3 +43,5 @@ next-env.d.ts
 # AI tools metadata
 .gemini/
 .specify/
+
+gha-creds-*.json

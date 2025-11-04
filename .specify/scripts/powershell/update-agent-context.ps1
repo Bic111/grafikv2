@@ -129,7 +129,7 @@ function Get-PlanField {
     $regex = "^\*\*$([Regex]::Escape($FieldPattern))\*\*: (.+)$"
     Get-Content -LiteralPath $PlanFile -Encoding utf8 | ForEach-Object {
         if ($_ -match $regex) { 
-            $val = $Matches[1].Trim()
+            $val = $Matches.Trim()
             if ($val -notin @('NEEDS CLARIFICATION','N/A')) { return $val }
         }
     } | Select-Object -First 1
@@ -290,7 +290,7 @@ function Update-ExistingAgentFile {
 
     $lines = Get-Content -LiteralPath $TargetFile -Encoding utf8
     $output = New-Object System.Collections.Generic.List[string]
-    $inTech = $false; $inChanges = $false; $techAdded = $false; $existingChanges = 0
+    $inTech = $false; $inChanges = $false; $existingChanges = 0
 
     for ($i=0; $i -lt $lines.Count; $i++) {
         $line = $lines[$i]
@@ -436,4 +436,3 @@ function Main {
 }
 
 Main
-
