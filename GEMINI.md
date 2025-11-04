@@ -1,4 +1,4 @@
-# Gemini Agent Context for Grafikv2
+﻿# Gemini Agent Context for Grafikv2
 
 This file provides context to the Gemini AI agent working on the Grafikv2 project.
 

@@ -43,3 +43,12 @@ next-env.d.ts
 # AI tools metadata
 .gemini/
 .specify/
+
+# Tauri
+/src-tauri/target
+/src-tauri/WixTools
+
+# SQLite database
+*.db
+*.db-shm
+*.db-wal

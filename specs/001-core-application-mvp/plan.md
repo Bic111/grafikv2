@@ -11,27 +11,27 @@
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.x
-**Primary Dependencies**: Next.js 16, React 19, Tailwind CSS 4, Google OR-Tools, Gemini API, **NEEDS CLARIFICATION: Desktop app packaging technology (e.g., Electron, Tauri)**
-**Storage**: **NEEDS CLARIFICATION: Local storage mechanism (e.g., SQLite, file-based)**
-**Testing**: **NEEDS CLARIFICATION: Testing framework (e.g., Jest, Vitest)**
-**Target Platform**: Windows Desktop (as a standalone executable)
-**Project Type**: Web application packaged for desktop
-**Performance Goals**: Generate schedule for a 20-person team in under 5 minutes.
-**Constraints**: Must be partially functional offline (local schedule generation). Internet required for advanced (Gemini) generation.
-**Scale/Scope**: 15-20 employees.
+<!--
+  ACTION REQUIRED: Replace the content in this section with the technical details
+  for the project. The structure here is presented in advisory capacity to guide
+  the iteration process.
+-->
+
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- **I. Język Polski jest Podstawą**: PASS (FR-007)
-- **II. Walidacja jest Niepodważalna**: PASS (FR-004, FR-005)
-- **III. AI Wspiera, Nie Zastępuje**: PASS (NFR-002, NFR-005)
-- **IV. Model Domeny Kieruje Rozwojem**: PASS (Spec includes Key Entities)
-- **V. Elastyczność przez Konfigurację**: PASS (FR-002)
-- **Wymagania Niefunkcjonalne (Desktop App)**: NEEDS RESEARCH. The core challenge is packaging a Next.js web application as a standalone Windows executable. This is the primary goal of the research phase.
-- **Proces Rozwoju i Jakości**: PASS (ESLint is in place)
+[Gates determined based on constitution file]
 
 ## Project Structure
 

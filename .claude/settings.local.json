@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git rev-parse:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tauri init:*)",
+      "Bash(Test-Path \"src-tauri\")",
+      "Bash(npm run build:*)",
+      "Bash(powershell -Command:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
