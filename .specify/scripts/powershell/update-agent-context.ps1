@@ -290,7 +290,7 @@ function Update-ExistingAgentFile {
 
     $lines = Get-Content -LiteralPath $TargetFile -Encoding utf8
     $output = New-Object System.Collections.Generic.List[string]
-    $inTech = $false; $inChanges = $false; $existingChanges = 0
+    $inTech = $false; $inChanges = $false; $techAdded = $false; $existingChanges = 0
 
     for ($i=0; $i -lt $lines.Count; $i++) {
         $line = $lines[$i]
@@ -309,7 +309,7 @@ function Update-ExistingAgentFile {
         }
         if ($line -eq '## Recent Changes') {
             $output.Add($line)
-            if ($newChangeEntry) { $output.Add($newChangeEntry) }
+            if ($newChangeEntry) { $output.Add($newChangeEntry); $changeAdded = $true }
             $inChanges = $true
             continue
         }

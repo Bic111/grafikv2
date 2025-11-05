@@ -1,8 +1,16 @@
 {
-  "outputStyle": "default",
   "permissions": {
     "allow": [
-      "Bash(cat:*)"
-    ]
+      "Bash(git rev-parse:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tauri init:*)",
+      "Bash(Test-Path \"src-tauri\")",
+      "Bash(npm run build:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(npm run tauri:dev:*)",
+      "Bash(powershell:*)"
+    ],
+    "deny": [],
+    "ask": []
   }
 }

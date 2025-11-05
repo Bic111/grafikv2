@@ -44,4 +44,20 @@ next-env.d.ts
 .gemini/
 .specify/
 
+# Tauri
+/src-tauri/target
+/src-tauri/WixTools
+
+# SQLite database
+*.db
+*.db-shm
+*.db-wal
+
+# Python virtual envs and artifacts
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# GitHub Actions credentials cache (local only)
 gha-creds-*.json
