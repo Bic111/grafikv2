@@ -73,3 +73,20 @@ The implementation will be phased, with each phase corresponding to a User Story
 - [X] T022 Review and resolve any remaining "TODO" or "NEEDS CLARIFICATION" items from the codebase.
 - [X] T023 Update the `quickstart.md` and create a `README.md` with final build and usage instructions.
 - [X] T024 Perform a final build using `npm run tauri build` and test the standalone Windows executable.
+
+---
+
+## Phase 6: Database Persistence Implementation (US4)
+
+*Goal: Implement full SQLite database integration for all CRUD operations, ensuring data persists across application restarts.*
+*Independent Test: Verify that data added before closing the application is still present after restarting.*
+
+- [ ] T025 [US4] Implement SQL queries in `get_employees` Tauri command using tauri-plugin-sql to fetch all employees from the database.
+- [ ] T026 [US4] Implement SQL INSERT query in `add_employee` Tauri command to persist new employees to the database.
+- [ ] T027 [US4] Implement SQL UPDATE query in `update_employee` Tauri command to modify existing employee records.
+- [ ] T028 [US4] Implement SQL queries in `get_shifts` and `update_shifts` commands to read and write shift configurations.
+- [ ] T029 [US4] Implement SQL queries for absence management in `get_absences`, `add_absence`, and `delete_absence` commands.
+- [ ] T030 [US4] Implement SQL queries for schedule entry management in `get_schedule` and `update_schedule_entry` commands.
+- [ ] T031 [US4] Update frontend components to remove mock data and rely entirely on backend Tauri commands for data.
+- [ ] T032 [US4] Test complete data persistence flow: add data, close application, restart, verify data is still present.
+- [ ] T033 [US4] Update specification status to "Complete" after all acceptance criteria pass.

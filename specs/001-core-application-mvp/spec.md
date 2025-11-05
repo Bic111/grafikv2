@@ -1,14 +1,9 @@
 # Feature Specification: Core Application MVP
 
-<<<<<<< HEAD
 **Feature Branch**: `001-core-application-mvp`
-=======
-**Feature Branch**: `002-core-application-mvp`
-# Feature Specification: Core Application MVP
-
-**Feature Branch**: `002-core-application-mvp`
 **Created**: 2025-11-04
-**Status**: Draft
+**Status**: In Progress
+**Updated**: 2025-11-05 (Added database persistence requirements)
 **Input**: User description: "Build the core application MVP as described in the /docs/newapp/ documentation."
 
 ## Clarifications
@@ -57,11 +52,26 @@ Jako manager, chcę móc zlecić systemowi automatyczne wygenerowanie projektu g
 1.  **Given** Pełna konfiguracja systemu (pracownicy, zmiany, nieobecności), **When** Manager klika "Generuj Grafik", **Then** System w ciągu kilku minut prezentuje projekt grafiku bez krytycznych błędów walidacyjnych.
 ---
 
+### User Story 4 - Trwałość Danych (Priority: P1)
+
+Jako manager, chcę aby wszystkie wprowadzone dane (pracownicy, zmiany, nieobecności, grafiki) były automatycznie zapisywane w lokalnej bazie danych, aby po zamknięciu i ponownym uruchomieniu aplikacji mogły być od razu dostępne bez potrzeby ponownego wprowadzania.
+**Why this priority**: Bez trwałości danych aplikacja jest bezużyteczna w praktycznym zastosowaniu - każde uruchomienie wymagałoby ponownej konfiguracji systemu.
+
+**Independent Test**: Można zweryfikować, czy po dodaniu pracownika, zamknięciu aplikacji i ponownym uruchomieniu, pracownik nadal istnieje w systemie z zachowanymi wszystkimi atrybutami.
+**Acceptance Scenarios**:
+
+1.  **Given** Aplikacja z danymi pracowników, zmian i grafiku, **When** Manager zamyka aplikację i uruchamia ją ponownie, **Then** Wszystkie dane są automatycznie załadowane i widoczne.
+2.  **Given** Manager edytuje dane pracownika, **When** Zmiany są zapisane, **Then** Modyfikacje są trwale przechowywane w bazie SQLite i dostępne po restarcie aplikacji.
+3.  **Given** Plik bazy danych grafik.db, **When** Manager kopiuje aplikację na inny komputer wraz z plikiem bazy, **Then** Wszystkie dane są przeniesione i funkcjonalne w nowej lokalizacji.
+---
+
 ### Edge Cases
 
 -   Zachowanie w przypadku niewystarczającej obsady: System wygeneruje grafik z brakami, wyraźnie wskazując, które zmiany nie zostały obsadzone, i wyświetli ostrzeżenie.
 -   Jak system obsługuje zmiany na przełomie roku/miesiąca?
 -   Co się dzieje, gdy plik importu z Excela ma nieprawidłową strukturę?
+-   Co się stanie, gdy plik bazy danych zostanie usunięty? System powinien automatycznie utworzyć nową, pustą bazę danych z pełnym schematem.
+-   Jak system obsługuje jednoczesne uruchamianie kilku instancji aplikacji? SQLite powinien zapewnić bezpieczne blokowanie dostępu do pliku.
 
 ## Requirements *(mandatory)*
 
@@ -76,6 +86,7 @@ Jako manager, chcę móc zlecić systemowi automatyczne wygenerowanie projektu g
 -   **FR-007**: Interfejs użytkownika i wszystkie komunikaty MUSZĄ być w języku polskim.
 -   **FR-008**: System MUSI umożliwiać eksport grafiku do formatu PDF i CSV.
 -   **FR-009**: Aplikacja MUSI działać jako samodzielna aplikacja desktopowa na systemie Windows.
+-   **FR-010**: System MUSI trwale przechowywać wszystkie dane (pracownicy, zmiany, nieobecności, wpisy grafiku) w lokalnej bazie danych SQLite. Wszystkie operacje CRUD (Create, Read, Update, Delete) MUSZĄ być obsługiwane przez rzeczywiste zapytania SQL, a dane MUSZĄ przetrwać restart aplikacji.
 
 ### Non-Functional Requirements
 
@@ -86,6 +97,7 @@ Jako manager, chcę móc zlecić systemowi automatyczne wygenerowanie projektu g
 -   **NFR-003 (Connectivity)**: Do użycia zaawansowanego trybu generowania grafiku (przez API) wymagane jest aktywne połączenie z internetem oraz skonfigurowany klucz API.
 -   **NFR-004 (Scalability/Performance)**: System musi płynnie obsługiwać grafik dla zespołu liczącego zazwyczaj 15 pracowników, z maksymalną liczbą 20 pracowników.
 -   **NFR-005 (Warning Handling)**: System powinien wyświetlać ostrzeżenia dotyczące niekrytycznych problemów (np. niespełnione preferencje, zbliżanie się do limitów godzin), pozwalając managerowi na ręczną korektę lub zatwierdzenie grafiku z ostrzeżeniami. Generator grafiku ma zapewnić brak błędów krytycznych.
+-   **NFR-006 (Database)**: Backend w Rust MUSI wykorzystywać tauri-plugin-sql do komunikacji z bazą danych SQLite. Plik bazy danych (`grafik.db`) MUSI być automatycznie tworzony przy pierwszym uruchomieniu aplikacji. Migracje schematu MUSZĄ być automatycznie stosowane przez tauri-plugin-sql przy starcie aplikacji. Wszystkie komendy Tauri obsługujące operacje CRUD MUSZĄ wykonywać rzeczywiste zapytania SQL.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -103,30 +115,4 @@ Jako manager, chcę móc zlecić systemowi automatyczne wygenerowanie projektu g
 -   **SC-002**: System identyfikuje 100% zdefiniowanych krytycznych naruszeń reguł w ręcznie edytowanym grafiku.
 -   **SC-003**: Automatyczne generowanie grafiku dla 20-osobowego zespołu na jeden miesiąc trwa poniżej 5 minut.
 -   **SC-004**: 90% wygenerowanych automatycznie grafików nie wymaga ręcznych poprawek w zakresie błędów krytycznych.
-### Non-Functional Requirements
-
--   **NFR-001 (Security)**: Aplikacja nie wymaga uwierzytelniania. Dostęp jest otwarty dla każdego użytkownika komputera, zgodnie z założeniem o lokalnym wykorzystaniu przez jedną osobę.
--   **NFR-002 (AI Generation)**: Generowanie grafiku będzie realizowane w modelu hybrydowym:
-    -   Domyślnie system spróbuje rozwiązać grafik przy użyciu prostego, lokalnego algorytmu.
-    -   W przypadku złożonych scenariuszy lub na żądanie managera, system użyje zewnętrznego API (Gemini) do wygenerowania propozycji grafiku.
--   **NFR-003 (Connectivity)**: Do użycia zaawansowanego trybu generowania grafiku (przez API) wymagane jest aktywne połączenie z internetem oraz skonfigurowany klucz API.
--   **NFR-004 (Scalability/Performance)**: System musi płynnie obsługiwać grafik dla zespołu liczącego zazwyczaj 15 pracowników, z maksymalną liczbą 20 pracowników.
--   **NFR-005 (Warning Handling)**: System powinien wyświetlać ostrzeżenia dotyczące niekrytycznych problemów (np. niespełnione preferencje, zbliżanie się do limitów godzin), pozwalając managerowi na ręczną korektę lub zatwierdzenie grafiku z ostrzeżeniami. Generator grafiku ma zapewnić brak błędów krytycznych.
-
->>>>>>> 001-core-application-mvp
-### Key Entities *(include if feature involves data)*
-
--   **Pracownik**: Reprezentuje osobę w zespole; atrybuty: id, imię, nazwisko, rola, etat, status.
--   **Zmiana**: Reprezentuje pojedynczy blok pracy; atrybuty: początek, koniec, wymagana obsada.
--   **Nieobecność**: Reprezentuje okres, w którym pracownik jest niedostępny; atrybuty: id pracownika, początek, koniec, typ (urlop, zwolnienie).
--   **Grafik**: Reprezentuje miesięczny plan pracy dla zespołu.
--   **Reguła Walidacyjna**: Reprezentuje ograniczenie biznesowe lub prawne (np. odpoczynek dobowy).
-
-## Success Criteria *(mandatory)*
-
-### Measurable Outcomes
-
--   **SC-001**: Manager może skonfigurować system (pracownicy, zmiany) w czasie poniżej 30 minut.
--   **SC-002**: System identyfikuje 100% zdefiniowanych krytycznych naruszeń reguł w ręcznie edytowanym grafiku.
--   **SC-003**: Automatyczne generowanie grafiku dla 20-osobowego zespołu na jeden miesiąc trwa poniżej 5 minut.
--   **SC-004**: 90% wygenerowanych automatycznie grafików nie wymaga ręcznych poprawek w zakresie błędów krytycznych.
+-   **SC-005**: 100% danych wprowadzonych przez użytkownika jest trwale przechowywanych w bazie SQLite i dostępnych po restarcie aplikacji.
