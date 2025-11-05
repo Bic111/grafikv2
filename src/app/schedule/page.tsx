@@ -11,6 +11,7 @@ import {
   updateScheduleEntry,
 } from '@/lib/db';
 import { runLocalSolver, runGeminiSolver } from '@/lib/solver';
+import { exportScheduleCSV, exportSchedulePDFHtml, downloadCSV, printPDF } from '@/lib/exports';
 import type { ScheduleEntry, Employee, Shift, SolverResult } from '@/lib/types';
 
 // Pomocnicza funkcja do formatowania daty
@@ -202,6 +203,39 @@ export default function SchedulePage() {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      if (!schedule || !employees || !shifts) {
+        alert('Brak danych do eksportu');
+        return;
+      }
+
+      const csvContent = await exportScheduleCSV(schedule, employees, shifts);
+      const filename = `grafik_${formatDate(weekDates[0])}_${formatDate(weekDates[6])}.csv`;
+      downloadCSV(csvContent, filename);
+    } catch (err) {
+      console.error('Błąd eksportu CSV:', err);
+      alert('Błąd podczas eksportu do CSV');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      if (!schedule || !employees || !shifts) {
+        alert('Brak danych do eksportu');
+        return;
+      }
+
+      const startDate = formatDate(weekDates[0]);
+      const endDate = formatDate(weekDates[6]);
+      const htmlContent = await exportSchedulePDFHtml(schedule, employees, shifts, startDate, endDate);
+      printPDF(htmlContent);
+    } catch (err) {
+      console.error('Błąd eksportu PDF:', err);
+      alert('Błąd podczas eksportu do PDF');
+    }
+  };
+
   const getEntriesForCell = (employeeId: number, date: string): ScheduleEntry[] => {
     return schedule?.filter((e) => e.employee_id === employeeId && e.date === date) || [];
   };
@@ -272,6 +306,23 @@ export default function SchedulePage() {
             className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
           >
             {isGenerating ? 'Generowanie...' : '✨ Generuj (Gemini AI)'}
+          </button>
+
+          <div className="border-l border-gray-300 mx-2 h-8"></div>
+
+          <button
+            onClick={handleExportCSV}
+            disabled={!schedule || schedule.length === 0}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+          >
+            📊 Eksportuj CSV
+          </button>
+          <button
+            onClick={handleExportPDF}
+            disabled={!schedule || schedule.length === 0}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+          >
+            📄 Drukuj PDF
           </button>
         </div>
 

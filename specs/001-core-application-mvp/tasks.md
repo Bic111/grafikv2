@@ -69,7 +69,7 @@ The implementation will be phased, with each phase corresponding to a User Story
 
 *Goal: Finalize the application for release.*
 
-- [ ] T021 Implement PDF and CSV export functionality as defined in FR-008. This can be a new Tauri command.
-- [ ] T022 Review and resolve any remaining "TODO" or "NEEDS CLARIFICATION" items from the codebase.
-- [ ] T023 Update the `quickstart.md` and create a `README.md` with final build and usage instructions.
-- [ ] T024 Perform a final build using `npm run tauri build` and test the standalone Windows executable.
+- [X] T021 Implement PDF and CSV export functionality as defined in FR-008. This can be a new Tauri command.
+- [X] T022 Review and resolve any remaining "TODO" or "NEEDS CLARIFICATION" items from the codebase.
+- [X] T023 Update the `quickstart.md` and create a `README.md` with final build and usage instructions.
+- [X] T024 Perform a final build using `npm run tauri build` and test the standalone Windows executable.

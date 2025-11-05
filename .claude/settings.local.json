@@ -6,7 +6,9 @@
       "Bash(npx tauri init:*)",
       "Bash(Test-Path \"src-tauri\")",
       "Bash(npm run build:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(npm run tauri:dev:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

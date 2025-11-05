@@ -27,6 +27,8 @@ pub fn run() {
       commands::update_shifts,
       commands::run_local_solver,
       commands::run_gemini_solver,
+      commands::export_schedule_csv,
+      commands::export_schedule_pdf_html,
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

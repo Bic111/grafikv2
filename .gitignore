@@ -52,3 +52,9 @@ next-env.d.ts
 *.db
 *.db-shm
 *.db-wal
+
+# Python virtual envs and artifacts
+.venv/
+venv/
+__pycache__/
+*.py[cod]
