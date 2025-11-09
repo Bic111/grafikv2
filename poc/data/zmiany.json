@@ -1,0 +1,30 @@
+[
+  {
+    "id": 0,
+    "nazwa": "Wolne",
+    "start_h": 0,
+    "end_h": 0,
+    "dlugosc_h": 0
+  },
+  {
+    "id": 1,
+    "nazwa": "Rano",
+    "start_h": 6,
+    "end_h": 14,
+    "dlugosc_h": 8
+  },
+  {
+    "id": 2,
+    "nazwa": "Popołudnie",
+    "start_h": 14,
+    "end_h": 22,
+    "dlugosc_h": 8
+  },
+  {
+    "id": 3,
+    "nazwa": "Noc",
+    "start_h": 22,
+    "end_h": 6,
+    "dlugosc_h": 8
+  }
+]

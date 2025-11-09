@@ -1,29 +1,24 @@
-# Environments
-.env
-.env*.local
-*.db
-*.sqlite3
+# Node.js
+node_modules/
+dist/
+build/
+*.log
+.env*
 
 # Python
 __pycache__/
 *.pyc
 .venv/
 venv/
-backend/venv/
+dist/
+*.egg-info/
 
-# Node.js
-node_modules/
-.next/
-out/
-npm-debug.log*
-yarn-debug.log*
-
-# Editor & OS
-.vscode/
-.idea/
+# Universal
 .DS_Store
 Thumbs.db
-
-# Other
-poc/
-*.log
+*.tmp
+*.swp
+.vscode/
+.idea/
+playwright-report/
+test-results/

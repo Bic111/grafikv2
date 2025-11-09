@@ -6,7 +6,6 @@ from flask_cors import CORS
 from .api import register_api
 from .database import create_db_tables
 from .sample_data import seed_initial_data
-from .database import create_db_tables
 
 
 load_dotenv()
@@ -29,9 +28,7 @@ def create_app() -> Flask:
     def healthcheck():
         return jsonify(status="ok")
 
-    with app.app_context():
-        create_db_tables()
-        seed_initial_data()
+
 
     return app
 
@@ -40,4 +37,8 @@ app = create_app()
 
 
 if __name__ == "__main__":
+    with app.app_context():
+        create_db_tables()
+        seed_initial_data()
     app.run(debug=os.getenv("FLASK_DEBUG", "0") == "1")
+

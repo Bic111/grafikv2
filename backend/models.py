@@ -10,10 +10,56 @@ from sqlalchemy import (
     Time,
 )
 from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy.types import JSON, Text
+from sqlalchemy.types import JSON, Text, Boolean
 
 
 Base = declarative_base()
+
+
+class LaborLawRule(Base):
+    __tablename__ = 'labor_law_rules'
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(120), nullable=False, unique=True)
+    name = Column(String(255), nullable=False)
+    category = Column(String(80), nullable=False)
+    severity = Column(String(40), nullable=False)
+    parameters = Column(JSON, nullable=True)
+    description = Column(Text, nullable=True)
+    active_from = Column(Date, nullable=True)
+    active_to = Column(Date, nullable=True)
+
+
+class Holiday(Base):
+    __tablename__ = 'holidays'
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, nullable=False, unique=True)
+    name = Column(String(120), nullable=False)
+    coverage_overrides = Column(JSON, nullable=True)
+    store_closed = Column(Boolean, default=False)
+
+
+class StaffingRequirementTemplate(Base):
+    __tablename__ = 'staffing_requirement_templates'
+    id = Column(Integer, primary_key=True, index=True)
+    day_type = Column(String(80), nullable=False)
+    shift_id = Column(Integer, ForeignKey('zmiany.id'), nullable=False)
+    role_id = Column(Integer, ForeignKey('role.id'), nullable=False)
+    min_staff = Column(Integer, default=0)
+    target_staff = Column(Integer, default=0)
+    max_staff = Column(Integer, nullable=True)
+    effective_from = Column(Date, nullable=True)
+    effective_to = Column(Date, nullable=True)
+
+
+class ReportSnapshot(Base):
+    __tablename__ = 'report_snapshots'
+    id = Column(Integer, primary_key=True, index=True)
+    scenario_id = Column(Integer, ForeignKey('grafiki_miesieczne.id'), nullable=False)
+    generated_at = Column(DateTime, default=datetime.utcnow)
+    metrics = Column(JSON, nullable=True)
+    absence_summary = Column(JSON, nullable=True)
+    format = Column(String(40), nullable=False)
+    storage_path = Column(String(255), nullable=True)
 
 
 class Rola(Base):
@@ -109,12 +155,17 @@ class Nieobecnosc(Base):
     pracownik = relationship("Pracownik", back_populates="nieobecnosci")
 
 
-class ParametryGeneratora(Base):
-    __tablename__ = "parametry_generatora"
+class GeneratorParameter(Base):
+    __tablename__ = "generator_parameters"
 
     id = Column(Integer, primary_key=True, index=True)
-    nazwa_parametru = Column(String(120), nullable=False, unique=True)
-    wartosc = Column(Text, nullable=False)
+    scenario_type = Column(String(80), nullable=False, unique=True)
+    weights = Column(JSON, nullable=False)
+    max_consecutive_nights = Column(Integer, nullable=True)
+    min_rest_hours_override = Column(Integer, nullable=True)
+    last_updated_by = Column(String(120), nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 
 class WzorceHistoryczne(Base):

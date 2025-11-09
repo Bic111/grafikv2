@@ -4,7 +4,16 @@ from datetime import date, time
 from typing import Dict, List
 
 from .database import session_scope
-from .models import Pracownik, Rola, Zmiana
+from .models import (
+    GeneratorParameter,
+    Holiday,
+    LaborLawRule,
+    Pracownik,
+    Rola,
+    StaffingRequirementTemplate,
+    Zmiana,
+)
+
 
 
 def seed_initial_data() -> None:
@@ -54,13 +63,13 @@ def seed_initial_data() -> None:
             "nazwa_zmiany": "Poranna",
             "start": time(hour=6, minute=0),
             "end": time(hour=14, minute=0),
-            "wymagana_obsada": {"Kierownik": 1, "Kasjer": 3},
+            "wymagana_obsada": {"Kierownik": 1, "Kasjer": 2},
         },
         {
             "nazwa_zmiany": "Popołudniowa",
             "start": time(hour=14, minute=0),
             "end": time(hour=22, minute=0),
-            "wymagana_obsada": {"Z-ca kierownika": 1, "Kasjer": 3},
+            "wymagana_obsada": {"Z-ca kierownika": 1, "Kasjer": 1},
         },
         {
             "nazwa_zmiany": "Weekend",
@@ -70,7 +79,29 @@ def seed_initial_data() -> None:
         },
     ]
 
+    default_holidays: List[Dict] = [
+        {"date": date(2025, 1, 1), "name": "Nowy Rok", "store_closed": True},
+        {"date": date(2025, 5, 1), "name": "Święto Pracy", "store_closed": True},
+        {"date": date(2025, 12, 25), "name": "Boże Narodzenie", "store_closed": True},
+    ]
+
+    default_rules: List[Dict] = [
+        {"code": "REST_DAILY", "name": "Odpoczynek dobowy", "category": "REST", "severity": "BLOCKING", "parameters": {"min_hours": 11}},
+        {"code": "REST_WEEKLY", "name": "Odpoczynek tygodniowy", "category": "REST", "severity": "BLOCKING", "parameters": {"min_hours": 35}},
+        {"code": "HOURS_WEEKLY_MAX", "name": "Maksymalny tygodniowy czas pracy", "category": "HOURS_LIMIT", "severity": "BLOCKING", "parameters": {"max_hours": 48}},
+    ]
+
+    default_generator_params: List[Dict] = [
+        {
+            "scenario_type": "DEFAULT",
+            "weights": {"preferencje": 5, "rotacja": 3},
+            "last_updated_by": "system",
+        },
+    ]
+
     with session_scope() as session:
+        # (existing role and shift seeding)
+        
         existing_roles = {
             role.nazwa_roli: role for role in session.query(Rola).all()
         }
@@ -86,22 +117,59 @@ def seed_initial_data() -> None:
                 session.flush()
                 existing_roles[role.nazwa_roli] = role
 
-        existing_shifts = {shift.nazwa_zmiany for shift in session.query(Zmiana).all()}
+        existing_shifts_map = {
+            shift.nazwa_zmiany: shift for shift in session.query(Zmiana).all()
+        }
         for shift_data in default_shifts:
-            if shift_data["nazwa_zmiany"] in existing_shifts:
-                continue
-            shift = Zmiana(
-                nazwa_zmiany=shift_data["nazwa_zmiany"],
-                godzina_rozpoczecia=shift_data["start"],
-                godzina_zakonczenia=shift_data["end"],
-                wymagana_obsada=shift_data["wymagana_obsada"],
-            )
-            session.add(shift)
+            if shift_data["nazwa_zmiany"] not in existing_shifts_map:
+                shift = Zmiana(
+                    nazwa_zmiany=shift_data["nazwa_zmiany"],
+                    godzina_rozpoczecia=shift_data["start"],
+                    godzina_zakonczenia=shift_data["end"],
+                    wymagana_obsada=shift_data["wymagana_obsada"],
+                )
+                session.add(shift)
+                session.flush()
+                existing_shifts_map[shift.nazwa_zmiany] = shift
+        
+        default_staffing_templates: List[Dict] = [
+            {"day_type": "WEEKDAY", "shift_name": "Poranna", "role_name": "Kasjer", "min_staff": 1, "target_staff": 2},
+            {"day_type": "WEEKEND", "shift_name": "Weekend", "role_name": "SSK", "min_staff": 1, "target_staff": 1},
+        ]
 
+        # Seeding logic for new entities
+        for holiday_data in default_holidays:
+            if not session.query(Holiday).filter_by(date=holiday_data["date"]).first():
+                session.add(Holiday(**holiday_data))
+
+        for rule_data in default_rules:
+            if not session.query(LaborLawRule).filter_by(code=rule_data["code"]).first():
+                session.add(LaborLawRule(**rule_data))
+
+        for params_data in default_generator_params:
+            if not session.query(GeneratorParameter).filter_by(
+                scenario_type=params_data["scenario_type"]
+            ).first():
+                session.add(GeneratorParameter(**params_data))
+
+        for template_data in default_staffing_templates:
+            role = existing_roles.get(template_data["role_name"])
+            shift = existing_shifts_map.get(template_data["shift_name"])
+            if role and shift:
+                if not session.query(StaffingRequirementTemplate).filter_by(day_type=template_data["day_type"], shift_id=shift.id, role_id=role.id).first():
+                    session.add(StaffingRequirementTemplate(
+                        day_type=template_data["day_type"],
+                        shift_id=shift.id,
+                        role_id=role.id,
+                        min_staff=template_data["min_staff"],
+                        target_staff=template_data["target_staff"],
+                    ))
+        
         existing_employees = {
             (employee.imie, employee.nazwisko)
             for employee in session.query(Pracownik).all()
         }
+
 
         todays_date = date.today()
         limit_map = {"Pełen etat": 168, "3/4 etatu": 126}

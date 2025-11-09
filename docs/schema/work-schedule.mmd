@@ -1,0 +1,86 @@
+erDiagram
+    ScheduleScenario ||--o{ ScheduleEntry : has
+    ScheduleScenario ||--o{ ValidationIssue : has
+    ScheduleScenario ||--o{ ReportSnapshot : has
+    LaborLawRule ||--|{ ValidationIssue : references
+    Employee ||--o{ EmployeePreference : has
+    GeneratorParameter }|..|{ ScheduleScenario : uses
+    StaffingRequirementTemplate }|..|{ ScheduleScenario : uses
+    Holiday }|..|{ ScheduleScenario : uses
+
+    ScheduleScenario {
+        string Id PK
+        date Month
+        string GeneratorType
+        string Status
+        datetime RunStartedAt
+        datetime RunCompletedAt
+        int RuntimeMs
+        decimal PenaltyScore
+    }
+
+    ScheduleEntry {
+        string Id PK
+        string ScheduleScenarioId FK
+        string EmployeeId FK
+        date Date
+        string ShiftId FK
+    }
+
+    LaborLawRule {
+        string Id PK
+        string Code
+        string Name
+        string Category
+        string Severity
+        json Parameters
+    }
+
+    ValidationIssue {
+        string Id PK
+        string ScheduleScenarioId FK
+        string Severity
+        string RuleCode FK
+        string Message
+    }
+
+    Holiday {
+        string Id PK
+        date Date
+        string Name
+        json CoverageOverrides
+        bool StoreClosed
+    }
+
+    StaffingRequirementTemplate {
+        string Id PK
+        string DayType
+        string ShiftId FK
+        string RoleId FK
+        int MinStaff
+        int TargetStaff
+        int MaxStaff
+    }
+
+    GeneratorParameter {
+        string Id PK
+        string ScenarioType
+        json Weights
+    }
+
+    EmployeePreference {
+        string Id PK
+        string EmployeeId FK
+        json PreferredOffDays
+        json PreferredShifts
+        int MaxWeeklyHours
+    }
+
+    ReportSnapshot {
+        string Id PK
+        string ScheduleScenarioId FK
+        datetime GeneratedAt
+        json Metrics
+        string Format
+        string StoragePath
+    }
