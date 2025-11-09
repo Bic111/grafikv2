@@ -1,0 +1,72 @@
+openapi: 3.0.0
+info:
+  title: WorkSchedule PL API
+  version: 1.0.0
+  description: API for managing work schedules.
+
+paths:
+  /api/pracownicy:
+    get:
+      summary: Get all employees
+      responses:
+        '200':
+          description: A list of employees.
+    post:
+      summary: Create a new employee
+      responses:
+        '201':
+          description: Employee created.
+
+  /api/pracownicy/{id}:
+    get:
+      summary: Get a single employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A single employee.
+    put:
+      summary: Update an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Employee updated.
+    delete:
+      summary: Delete an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Employee deleted.
+
+  /api/role:
+    get:
+      summary: Get all roles
+      responses:
+        '200':
+          description: A list of roles.
+    post:
+      summary: Create a new role
+      responses:
+        '201':
+          description: Role created.
+
+  /api/grafiki/generuj:
+    post:
+      summary: Generate a new schedule
+      responses:
+        '200':
+          description: Schedule generated.

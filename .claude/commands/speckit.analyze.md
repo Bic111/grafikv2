@@ -62,11 +62,7 @@ Load only the minimal necessary context from each artifact:
 
 **From constitution:**
 
-- **Modularity and Reusability**: Does the proposed solution promote modularity and reusability?
-- **API-First Design**: Is the API well-defined and documented?
-- **Test-Driven Development (TDD)**: Are the tests written before the implementation?
-- **Continuous Integration and Continuous Delivery (CI/CD)**: Is the CI/CD pipeline configured for the new feature?
-- **Documentation**: Is the documentation updated to reflect the new feature?
+- Load `.specify/memory/constitution.md` for principle validation
 
 ### 3. Build Semantic Models
 

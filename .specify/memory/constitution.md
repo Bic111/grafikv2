@@ -1,50 +1,44 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+- Version change: 1.0.0 → 1.1.0
+- List of modified principles: 
+  - "Test-Driven Development (TDD)" → "Walidacja i zgodność z prawem pracy"
+  - "Continuous Integration and Continuous Delivery (CI/CD)" → "Optymalizacja oparta na danych"
+- Added sections: None
+- Removed sections: None
+- Templates requiring updates:
+- .specify/templates/plan-template.md: ⚠ pending
+- Follow-up TODOs: None
+-->
+# WorkSchedule PL Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Modularity and Reusability
+All functionalities will be developed as independent, reusable modules. Each module must have a well-defined interface and be independently testable. This ensures that the components can be easily integrated into different parts of the application or even in other projects, promoting a clean and scalable architecture.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. API-First Design
+All modules will expose their functionalities through a well-defined API. The API design must be documented using OpenAPI/Swagger before implementation. This ensures a clear separation between the modules and the rest of the application, allowing for parallel development and easier testing.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Walidacja i zgodność z prawem pracy
+Każda funkcjonalność modyfikująca lub generująca grafik musi być w pierwszej kolejności sprawdzona pod kątem zgodności z polskim Kodeksem Pracy. Testy walidacyjne muszą być napisane przed implementacją logiki biznesowej, aby zagwarantować, że system nie wygeneruje nieprawidłowego grafiku.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Optymalizacja oparta na danych
+System będzie wykorzystywał silnik optymalizacyjny (Google OR-Tools) do automatycznego generowania grafików. Proces ten musi być sterowany przez precyzyjnie zdefiniowane ograniczenia (prawne, biznesowe) oraz funkcję celu (np. minimalizacja nadgodzin, równomierne obciążenie), aby zapewnić jak najlepszy wynik.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Dokumentacja
+Kluczowe elementy systemu, takie jak API, modele danych i instrukcje uruchomieniowe, muszą być dobrze udokumentowane. Zapewni to łatwość w utrzymaniu i dalszym rozwoju aplikacji.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Additional Constraints
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+The project will be developed using the following technology stack: Next.js (TypeScript) for the frontend, Python (Flask/FastAPI) for the backend, and a local SQLite database. The optimization engine will be Google OR-Tools. The application is run and managed via PowerShell scripts.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Development Workflow
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+The development workflow will be based on the Gitflow workflow. The main branch will be used for the production-ready code, and the develop branch will be used for the integration of the new features. The features will be developed in separate feature branches.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+All significant code changes should be developed in separate feature branches and reviewed before being merged into the develop branch.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.1.0 | **Ratified**: 2025-11-09 | **Last Amended**: 2025-11-09
