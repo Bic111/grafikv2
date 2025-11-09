@@ -1,10 +1,26 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import CalendarView from "../../components/CalendarView";
+import GeneratorPanel from "../../components/GeneratorPanel";
+import MonthNavigator from "../../components/MonthNavigator";
+import Legend from "../../components/Legend";
 
+// ... (reszta typów bez zmian)
 type ScheduleIssue = {
   level: string;
   message: string;
+  rule_code?: string;
+};
+
+type ScheduleDiagnostics = {
+  generator_type: string;
+  scenario_type?: string;
+  runtime_ms: number;
+  entry_count: number;
+  issue_count: number;
+  blocking_issues: number;
+  warning_issues: number;
 };
 
 type Shift = {
@@ -41,38 +57,44 @@ type ScheduleResponse = {
   status: string;
   entries: ScheduleEntry[];
   issues?: ScheduleIssue[];
+  diagnostics?: ScheduleDiagnostics;
   shifts: Shift[];
   absences: Absence[];
 };
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
-
-const formatShiftTime = (shift: Shift) => {
-  if (!shift.godzina_rozpoczecia || !shift.godzina_zakonczenia) {
-    return "";
+const appEnv = (
+  globalThis as typeof globalThis & {
+    process?: { env?: Record<string, string | undefined> };
   }
-  return `${shift.godzina_rozpoczecia.slice(0, 5)}–${shift.godzina_zakonczenia.slice(0, 5)}`;
-};
+).process?.env;
+
+const API_BASE_URL = appEnv?.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
+
 
 export default function SchedulePage() {
   const [schedule, setSchedule] = useState<ScheduleResponse | null>(null);
   const [entries, setEntries] = useState<ScheduleEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [draggedEntryId, setDraggedEntryId] = useState<number | null>(null);
-  const [dirty, setDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [currentDisplayMonth, setCurrentDisplayMonth] = useState('');
 
+  // ... (reszta hooków i logiki bez zmian)
+  const [draggedEntryId, setDraggedEntryId] = useState<number | null>(null);
+  
   useEffect(() => {
-    const load = async () => {
+    // Ta funkcja teraz będzie ładować grafik dla `currentDisplayMonth`
+    const load = async (month: string) => {
+      if (!month) return; // Nie wykonuj zapytania, jeśli miesiąc jest pusty
+      setLoading(true);
+      setError(null);
       try {
-        const response = await fetch(`${API_BASE_URL}/api/grafiki/ostatni`);
+        // Używamy endpointu do pobierania grafiku dla konkretnego miesiąca
+        const response = await fetch(`${API_BASE_URL}/api/grafiki/miesiac/${month}`);
         if (!response.ok) {
           const problem = await response.json().catch(() => null);
-          throw new Error(problem?.message ?? "Brak grafiku do wyświetlenia");
+          setSchedule(null);
+          setEntries([]);
+          throw new Error(problem?.message ?? `Brak grafiku dla ${month}`);
         }
         const data = (await response.json()) as ScheduleResponse;
         setSchedule(data);
@@ -84,8 +106,83 @@ export default function SchedulePage() {
       }
     };
 
-    void load();
-  }, []);
+    // Wywołujemy funkcję `load` za każdym razem, gdy zmienia się `currentDisplayMonth`
+    void load(currentDisplayMonth);
+  }, [currentDisplayMonth]);
+
+  // Drugi useEffect do załadowania danych początkowych
+  useEffect(() => {
+    const loadInitial = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/grafiki/ostatni`);
+        if (!response.ok) {
+          const problem = await response.json().catch(() => null);
+          throw new Error(problem?.message ?? "Brak grafiku do wyświetlenia");
+        }
+        const data = (await response.json()) as ScheduleResponse;
+        setSchedule(data);
+        setEntries(data.entries);
+        setCurrentDisplayMonth(data.miesiac_rok); // Ustawiamy miesiąc na podstawie danych
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Wystąpił nieznany błąd");
+      } finally {
+        setLoading(false);
+      }
+    };
+    // Uruchamiamy tylko raz, przy pierwszym załadowaniu komponentu
+    if (!currentDisplayMonth) {
+      void loadInitial();
+    }
+  }, []); // Pusta tablica zależności zapewnia jednorazowe wykonanie
+
+
+  const handleGenerate = async (year: number, month: number, generatorType: string, scenarioType?: string) => {
+    console.log(`Generowanie grafiku dla: ${year}-${month} z ${generatorType}`);
+    setLoading(true);
+    setError(null);
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/grafiki/generuj`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              year: year, 
+              month: month, 
+              generator_type: generatorType,
+              scenario_type: generatorType === 'ortools' ? scenarioType : undefined
+            }),
+        });
+        if (!response.ok) {
+            const problem = await response.json().catch(() => null);
+            throw new Error(problem?.message ?? 'Błąd podczas generowania grafiku');
+        }
+        // Po udanym wygenerowaniu, odświeżamy dane
+        const data = await response.json();
+        setSchedule(data);
+        setEntries(data.entries);
+        setCurrentDisplayMonth(data.miesiac_rok);
+    } catch (err) {
+        setError(err instanceof Error ? err.message : 'Wystąpił nieznany błąd');
+    } finally {
+        setLoading(false);
+    }
+  };
+  
+  const handlePrevMonth = () => {
+    if (!currentDisplayMonth) return;
+    const currentDate = new Date(`${currentDisplayMonth}-02`);
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    setCurrentDisplayMonth(currentDate.toISOString().slice(0, 7));
+  };
+
+  const handleNextMonth = () => {
+    if (!currentDisplayMonth) return;
+    const currentDate = new Date(`${currentDisplayMonth}-02`);
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    setCurrentDisplayMonth(currentDate.toISOString().slice(0, 7));
+  };
+
 
   const shiftMap = useMemo(() => {
     if (!schedule) {
@@ -128,8 +225,6 @@ export default function SchedulePage() {
     }));
   }, [entries, schedule]);
 
-  const issues = schedule?.issues ?? [];
-
   const handleDrop = (targetDate: string, shiftId: number) => {
     if (draggedEntryId === null) {
       return;
@@ -143,178 +238,96 @@ export default function SchedulePage() {
       ),
     );
     setDraggedEntryId(null);
-    setDirty(true);
-    setFeedback(null);
-    setSaveError(null);
-  };
-
-  const onSave = async () => {
-    if (!schedule) {
-      return;
-    }
-    setSaving(true);
-    setSaveError(null);
-    setFeedback(null);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/grafiki/${schedule.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: schedule.status,
-          entries: entries.map((entry) => ({
-            id: entry.id,
-            data: entry.data,
-            zmiana_id: entry.zmiana_id,
-            pracownik_id: entry.pracownik_id,
-          })),
-        }),
-      });
-
-      if (!response.ok) {
-        const problem = await response.json().catch(() => null);
-        throw new Error(problem?.message ?? "Nie udało się zapisać zmian");
-      }
-
-      const data = (await response.json()) as ScheduleResponse;
-      setSchedule(data);
-      setEntries(data.entries);
-      setDirty(false);
-      setFeedback("Zmiany zostały zapisane");
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Wystąpił nieznany błąd podczas zapisywania");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const onReset = () => {
-    if (!schedule) {
-      return;
-    }
-    setEntries(schedule.entries);
-    setDirty(false);
-    setSaveError(null);
-    setFeedback(null);
   };
 
   return (
-    <div className="space-y-8">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-slate-900">Grafik pracy</h1>
-        <p className="text-sm text-slate-600">
-          Przeciągaj pracowników pomiędzy zmianami, a następnie zapisz zmiany, aby zaktualizować
-          grafik.
-        </p>
-      </header>
-
-      {loading ? (
-        <p className="text-sm text-slate-600">Ładowanie grafiku...</p>
-      ) : error ? (
-        <p className="text-sm text-red-600">{error}</p>
-      ) : !schedule ? (
-        <p className="text-sm text-slate-600">Brak danych do wyświetlenia.</p>
-      ) : (
-        <section className="space-y-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium text-slate-600">
-              Miesiąc: {schedule.miesiac_rok}
-            </span>
-            <button
-              type="button"
-              className="inline-flex items-center rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
-              onClick={onSave}
-              disabled={!dirty || saving}
-            >
-              {saving ? "Zapisywanie..." : "Zapisz zmiany"}
-            </button>
-            <button
-              type="button"
-              className="text-sm font-medium text-slate-600 underline-offset-2 hover:underline"
-              onClick={onReset}
-              disabled={!dirty || saving}
-            >
-              Odrzuć zmiany
-            </button>
-            {dirty && !saving && (
-              <span className="text-xs font-medium uppercase text-amber-600">
-                Niezapisane zmiany
-              </span>
-            )}
-          </div>
-
-          {feedback && <p className="text-sm text-green-600">{feedback}</p>}
-          {saveError && <p className="text-sm text-red-600">{saveError}</p>}
-
-          {issues.length > 0 && !dirty && (
-            <div className="rounded border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              <p className="font-semibold">Ostrzeżenia dla aktualnego grafiku:</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5">
-                {issues.map((issue, index) => (
-                  <li key={`${issue.level}-${index}`}>
-                    <span className="font-semibold uppercase">{issue.level}</span> – {issue.message}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="grid gap-6">
-            {grouped.length === 0 && (
-              <p className="text-sm text-slate-600">Brak przypisanych zmian w bieżącym grafiku.</p>
-            )}
-            {grouped.map(({ date, shifts }) => (
-              <div key={date} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 className="text-sm font-semibold text-slate-900">
-                  {new Date(date).toLocaleDateString("pl-PL", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                  })}
-                </h3>
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
-                  {shifts.map(({ shift, entries: shiftEntries }) => (
-                    <div
-                      key={shift.id}
-                      className="rounded border border-dashed border-slate-300 bg-slate-50 p-3"
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        handleDrop(date, shift.id);
-                      }}
-                    >
-                      <div className="space-y-0.5 text-sm">
-                        <p className="font-medium text-slate-800">{shift.nazwa_zmiany}</p>
-                        <p className="text-xs text-slate-500">{formatShiftTime(shift) || ""}</p>
-                      </div>
-                      <ul className="mt-3 space-y-2">
-                        {shiftEntries.map((entry) => (
-                          <li
-                            key={entry.id}
-                            draggable
-                            onDragStart={() => setDraggedEntryId(entry.id)}
-                            onDragEnd={() => setDraggedEntryId(null)}
-                            className="cursor-move rounded border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm hover:border-blue-500"
-                          >
-                            <p className="font-medium text-slate-900">
-                              {entry.pracownik?.imie} {entry.pracownik?.nazwisko}
-                            </p>
-                            <p className="text-xs text-slate-500">{entry.pracownik?.rola ?? "brak roli"}</p>
-                          </li>
-                        ))}
-                        {shiftEntries.length === 0 && (
-                          <li className="rounded border border-slate-200 bg-white px-3 py-4 text-center text-xs text-slate-400">
-                            Przeciągnij tu pracownika
-                          </li>
-                        )}
-                      </ul>
-                    </div>
-                  ))}
+    <div className="flex flex-col h-full w-full">
+      <GeneratorPanel onGenerate={handleGenerate} />
+      
+      {/* Diagnostics Panel */}
+      {schedule?.diagnostics && (
+        <div className="bg-gray-800 p-3 rounded-lg mb-3">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center space-x-6">
+              <div>
+                <span className="text-gray-400">Algorytm: </span>
+                <span className="text-white font-medium">
+                  {schedule.diagnostics.generator_type === 'heuristic' ? 'Heurystyczny' : 'OR-Tools'}
+                </span>
+              </div>
+              {schedule.diagnostics.scenario_type && (
+                <div>
+                  <span className="text-gray-400">Scenariusz: </span>
+                  <span className="text-white font-medium">
+                    {schedule.diagnostics.scenario_type === 'balanced' && 'Zbalansowany'}
+                    {schedule.diagnostics.scenario_type === 'minimize_work' && 'Minimalizuj pracę'}
+                    {schedule.diagnostics.scenario_type === 'maximize_coverage' && 'Maksymalizuj pokrycie'}
+                  </span>
                 </div>
+              )}
+              <div>
+                <span className="text-gray-400">Czas: </span>
+                <span className="text-white font-medium">{schedule.diagnostics.runtime_ms} ms</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Wpisów: </span>
+                <span className="text-white font-medium">{schedule.diagnostics.entry_count}</span>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className={`${schedule.diagnostics.blocking_issues > 0 ? 'text-red-400' : 'text-green-400'} font-medium`}>
+                ⊗ {schedule.diagnostics.blocking_issues} błędów
+              </div>
+              <div className={`${schedule.diagnostics.warning_issues > 0 ? 'text-yellow-400' : 'text-green-400'} font-medium`}>
+                ⚠ {schedule.diagnostics.warning_issues} ostrzeżeń
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Issues Panel */}
+      {schedule?.issues && schedule.issues.length > 0 && (
+        <div className="bg-gray-800 p-3 rounded-lg mb-3 max-h-32 overflow-y-auto">
+          <div className="text-sm space-y-1">
+            {schedule.issues.map((issue, index) => (
+              <div 
+                key={`${issue.level}-${index}`}
+                className={`flex items-start space-x-2 ${
+                  issue.level === 'error' ? 'text-red-400' : 'text-yellow-400'
+                }`}
+              >
+                <span className="font-bold mt-0.5">{issue.level === 'error' ? '⊗' : '⚠'}</span>
+                <span>
+                  {issue.rule_code && <span className="font-mono text-xs mr-1">[{issue.rule_code}]</span>}
+                  {issue.message}
+                </span>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      )}
+      
+      <div className="bg-gray-800 p-3 rounded-lg mb-4 flex items-center justify-between">
+        <MonthNavigator 
+          currentMonth={currentDisplayMonth}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
+        />
+        <Legend />
+      </div>
+      
+      {loading ? (
+        <p className="text-center">Ładowanie grafiku...</p>
+      ) : error ? (
+        <p className="text-center text-red-500">{error}</p>
+      ) : (
+        <CalendarView 
+          scheduleData={grouped}
+          onDrop={handleDrop}
+          onDragStart={setDraggedEntryId}
+          onDragEnd={() => setDraggedEntryId(null)}
+        />
       )}
     </div>
   );
