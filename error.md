@@ -1,0 +1,4 @@
+# PHASE 9 – błędy implementacji
+
+- [`LimitForm.tsx`](frontend/components/employees/forms/LimitForm.tsx:32) oraz [`LimitForm.tsx`](frontend/components/employees/forms/LimitForm.tsx:139) używają klucza `max_miesiecznie` zamiast `max_miesięcznie`, przez co formularz nie wypełnia pola „Max miesiąc” przy edycji i wysyła błędny payload do API.
+- [`RegulyTab.tsx`](frontend/components/employees/RegulyTab.tsx:176) oraz [`RegulyTab.tsx`](frontend/components/employees/RegulyTab.tsx:333) mieszają klucze `max_miesięcznie` i `max_miesiecznie`, co powoduje wyświetlanie wartości `—` w kolumnie „Max miesiąc (h)” po zapisaniu limitu oraz niespójne sortowanie tej kolumny.
