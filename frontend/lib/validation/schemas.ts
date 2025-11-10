@@ -4,6 +4,7 @@
 
 import { z } from 'zod';
 import { DayType } from '@/types/staffing-template'; // Import DayType
+import { shiftParameterInputSchema, dayFormSchema } from './shiftParameterSchemas';
 
 /**
  * Employee validation schema
@@ -54,43 +55,17 @@ export type AbsenceFormData = z.infer<typeof absenceSchema>;
 
 /**
  * Shift Parameter validation schema
+ * Imported from dedicated shiftParameterSchemas.ts for modularity
  */
-export const shiftParameterSchema = z.object({
-  id: z.string().optional(),
-  dzien_tygodnia: z
-    .number()
-    .int()
-    .min(0, 'Dzień musi być od 0 do 6')
-    .max(6, 'Dzień musi być od 0 do 6'),
-  typ_zmiany: z.enum(['Rano', 'Środek', 'Popoludniu'] as const, {
-    message: 'Proszę wybrać prawidłowy typ zmiany',
-  }),
-  godzina_od: z
-    .string()
-    .regex(/^([0-1][0-9]|2[0-3]):([0-5]\d)$/, 'Proszę podać czas w formacie HH:MM'),
-  godzina_do: z
-    .string()
-    .regex(/^([0-1][0-9]|2[0-3]):([0-5]\d)$/, 'Proszę podać czas w formacie HH:MM'),
-  liczba_obsad: z
-    .number()
-    .int()
-    .nonnegative('Liczba obsad musi być dodatnia'),
-  czy_prowadzacy: z.boolean().default(false),
-  utworzono: z.string().optional(),
-  zaktualizowano: z.string().optional(),
-}).refine(
-  (data) => {
-    const [fromHour, fromMin] = data.godzina_od.split(':').map(Number);
-    const [toHour, toMin] = data.godzina_do.split(':').map(Number);
-    return fromHour * 60 + fromMin < toHour * 60 + toMin;
-  },
-  {
-    message: 'Godzina rozpoczęcia musi być przed godziną zakończenia',
-    path: ['godzina_do'],
-  }
-);
+export { shiftParameterInputSchema, dayFormSchema } from './shiftParameterSchemas';
+export type { ShiftParameterInput, DayFormSchema } from './shiftParameterSchemas';
 
-export type ShiftParameterFormData = z.infer<typeof shiftParameterSchema>;
+/**
+ * Legacy type alias for backward compatibility
+ * Use ShiftParameterInput from shiftParameterSchemas instead
+ * @deprecated Use ShiftParameterInput from shiftParameterSchemas
+ */
+export type ShiftParameterFormData = z.infer<typeof shiftParameterInputSchema>;
 
 /**
  * Holiday validation schema
