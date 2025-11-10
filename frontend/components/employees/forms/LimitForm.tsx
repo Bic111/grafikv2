@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type { HourLimit } from '@/types';
 import { hourLimitFormSchema, type HourLimitFormData } from '@/types/schemas';
 import { EMPLOYMENT_LABELS } from '@/types/hour-limit';
+import { normalizeHourLimit } from '@/utils/hour-limit-normalizer';
 
 export interface LimitFormProps {
   initialData?: HourLimit;
@@ -19,7 +20,10 @@ export function LimitForm({
   onCancel,
   isLoading = false,
   submitLabel = initialData ? 'Zapisz zmiany' : 'Dodaj limit',
-}: LimitFormProps): JSX.Element {
+}: LimitFormProps): React.JSX.Element {
+  // Normalize initial data to handle both key variants
+  const normalizedInitialData = initialData ? normalizeHourLimit(initialData) : undefined;
+
   const {
     register,
     handleSubmit,
@@ -27,19 +31,19 @@ export function LimitForm({
     reset,
   } = useForm<HourLimitFormData>({
     resolver: zodResolver(hourLimitFormSchema),
-    defaultValues: initialData
+    defaultValues: normalizedInitialData
       ? {
-          etat: initialData.etat,
-          max_dziennie: initialData.max_dziennie,
-          max_tygodniowo: initialData.max_tygodniowo,
-          max_miesiecznie: initialData.max_miesięcznie,
-          max_kwartalnie: initialData.max_kwartalnie,
+          etat: normalizedInitialData.etat,
+          max_dziennie: normalizedInitialData.max_dziennie,
+          max_tygodniowo: normalizedInitialData.max_tygodniowo,
+          max_miesięcznie: normalizedInitialData.max_miesięcznie,
+          max_kwartalnie: normalizedInitialData.max_kwartalnie,
         }
       : {
           etat: 1.0,
           max_dziennie: undefined,
           max_tygodniowo: undefined,
-          max_miesiecznie: undefined,
+          max_miesięcznie: undefined,
           max_kwartalnie: undefined,
         },
   });
@@ -55,7 +59,7 @@ export function LimitForm({
           etat: 1.0,
           max_dziennie: undefined,
           max_tygodniowo: undefined,
-          max_miesiecznie: undefined,
+          max_miesięcznie: undefined,
           max_kwartalnie: undefined,
         });
       }
@@ -147,14 +151,14 @@ export function LimitForm({
           min="0"
           disabled={isProcessing}
           className={`mt-1 block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            errors.max_miesiecznie ? 'border-red-500 focus:border-red-500' : 'border-gray-300'
+            errors.max_miesięcznie ? 'border-red-500 focus:border-red-500' : 'border-gray-300'
           } ${isProcessing ? 'cursor-not-allowed bg-gray-100' : 'bg-white'}`}
-          {...register('max_miesiecznie', {
+          {...register('max_miesięcznie', {
             valueAsNumber: true,
           })}
         />
-        {errors.max_miesiecznie && (
-          <p className="mt-1 text-sm text-red-600">{errors.max_miesiecznie.message}</p>
+        {errors.max_miesięcznie && (
+          <p className="mt-1 text-sm text-red-600">{errors.max_miesięcznie.message}</p>
         )}
       </div>
 

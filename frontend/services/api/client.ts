@@ -10,33 +10,56 @@ import { handleErrorResponse, NetworkError } from './errors';
  */
 async function fetchWithTimeout(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  maxRetries: number = 3
 ): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  let lastError: unknown = null;
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
-    if (!response.ok) {
-      await handleErrorResponse(response);
-    }
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
 
-    return response;
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new NetworkError(`Request timeout after ${REQUEST_TIMEOUT}ms`);
+      if (!response.ok) {
+        await handleErrorResponse(response);
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+
+      const isRetryableError =
+        (error instanceof DOMException && error.name === 'AbortError') ||
+        error instanceof TypeError;
+
+      if (!isRetryableError || attempt === maxRetries) {
+        if (isRetryableError && attempt === maxRetries) {
+          console.warn(`Network error after ${maxRetries + 1} attempts, giving up:`, error);
+        }
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          throw new NetworkError(`Request timeout after ${REQUEST_TIMEOUT}ms`);
+        }
+        if (error instanceof TypeError) {
+          throw new NetworkError('Network connection failed');
+        }
+        throw error;
+      }
+
+      const delayMs = Math.pow(2, attempt) * 1000;
+      console.warn(`Network error (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms:`, error);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      // continue to next attempt
+    } finally {
+      clearTimeout(timeoutId);
     }
-    if (error instanceof TypeError) {
-      throw new NetworkError('Network connection failed');
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
   }
+
+  throw (lastError instanceof Error ? lastError : new Error('Unknown error occurred'));
 }
 
 /**

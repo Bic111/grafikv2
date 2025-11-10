@@ -1,14 +1,23 @@
 import React from 'react';
-import type { Rule, HourLimit } from '@/types';
+import type {
+  Rule,
+  HourLimit,
+  CreateRuleInput,
+  UpdateRuleInput,
+  CreateHourLimitInput,
+  UpdateHourLimitInput,
+} from '@/types';
 import { ruleAPI, hourLimitAPI, getErrorMessage } from '@/services/api';
-import { Table, TableSkeleton, ErrorMessage, ConfirmDialog, type TableSortState } from '@/components/common';
+import { Table, TableSkeleton, ErrorMessage, ConfirmDialog, LoadingSpinner, type TableSortState } from '@/components/common';
 import { RuleForm, LimitForm } from './forms';
 import type { RuleFormData, HourLimitFormData } from '@/types/schemas';
 import { EMPLOYMENT_LABELS } from '@/types/hour-limit';
 
+/**
+ * Sort helpers
+ */
 function sortRules(data: Rule[], sortState: TableSortState): Rule[] {
   const sorted = [...data];
-
   sorted.sort((a, b) => {
     const { columnKey, direction } = sortState;
     const orderMultiplier = direction === 'asc' ? 1 : -1;
@@ -18,13 +27,11 @@ function sortRules(data: Rule[], sortState: TableSortState): Rule[] {
 
     return valueA.localeCompare(valueB, 'pl') * orderMultiplier;
   });
-
   return sorted;
 }
 
 function sortLimits(data: HourLimit[], sortState: TableSortState): HourLimit[] {
   const sorted = [...data];
-
   sorted.sort((a, b) => {
     const { columnKey, direction } = sortState;
     const orderMultiplier = direction === 'asc' ? 1 : -1;
@@ -33,21 +40,26 @@ function sortLimits(data: HourLimit[], sortState: TableSortState): HourLimit[] {
       return (a.etat - b.etat) * orderMultiplier;
     }
 
-    if (columnKey === 'max_dziennie' || columnKey === 'max_tygodniowo' || columnKey === 'max_miesięcznie' || columnKey === 'max_kwartalnie') {
-      const valueA = a[columnKey as keyof HourLimit] as number || 0;
-      const valueB = b[columnKey as keyof HourLimit] as number || 0;
-      return (valueA - valueB) * orderMultiplier;
+    if (
+      columnKey === 'max_dziennie' ||
+      columnKey === 'max_tygodniowo' ||
+      columnKey === 'max_miesięcznie' ||
+      columnKey === 'max_kwartalnie'
+    ) {
+      // access with canonical key including diacritic
+      const va = (a as any)[columnKey] as number | undefined;
+      const vb = (b as any)[columnKey] as number | undefined;
+      return ((va ?? 0) - (vb ?? 0)) * orderMultiplier;
     }
 
     return 0;
   });
-
   return sorted;
 }
 
 type TabSection = 'list' | 'edit-rule' | 'edit-limit' | 'add-rule' | 'add-limit';
 
-export function RegulyTab(): JSX.Element {
+export function RegulyTab(): React.ReactElement {
   // Rules state
   const [rules, setRules] = React.useState<Rule[]>([]);
   const [ruleSortState, setRuleSortState] = React.useState<TableSortState>({
@@ -65,6 +77,7 @@ export function RegulyTab(): JSX.Element {
   // UI state
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isRetrying, setIsRetrying] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [activeSection, setActiveSection] = React.useState<TabSection>('list');
   const [selectedRule, setSelectedRule] = React.useState<Rule | null>(null);
@@ -79,10 +92,7 @@ export function RegulyTab(): JSX.Element {
     try {
       setIsLoading(true);
       setError(null);
-      const [rulesData, limitsData] = await Promise.all([
-        ruleAPI.getAll(),
-        hourLimitAPI.getAll(),
-      ]);
+      const [rulesData, limitsData] = await Promise.all([ruleAPI.getAll(), hourLimitAPI.getAll()]);
       setRules(rulesData);
       setLimits(limitsData);
     } catch (err) {
@@ -90,6 +100,15 @@ export function RegulyTab(): JSX.Element {
       console.error('Error loading rules and limits:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    try {
+      setIsRetrying(true);
+      await loadData();
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -113,15 +132,19 @@ export function RegulyTab(): JSX.Element {
       setIsSaving(true);
       setError(null);
 
-      const payload = {
-        nazwa: data.nazwa,
-        ...(data.opis ? { opis: data.opis } : {}),
-        ...(data.typ ? { typ: data.typ } : {}),
-      };
-
       if (selectedRule?.id) {
+        const payload: UpdateRuleInput = {
+          nazwa: data.nazwa,
+          ...(data.opis !== undefined ? { opis: data.opis } : {}),
+          ...(data.typ !== undefined ? { typ: data.typ } : {}),
+        };
         await ruleAPI.update(selectedRule.id, payload);
       } else {
+        const payload: CreateRuleInput = {
+          nazwa: data.nazwa,
+          ...(data.opis !== undefined ? { opis: data.opis } : {}),
+          ...(data.typ !== undefined ? { typ: data.typ } : {}),
+        };
         await ruleAPI.create(payload);
       }
 
@@ -142,7 +165,7 @@ export function RegulyTab(): JSX.Element {
     try {
       setError(null);
       setIsSaving(true);
-      await ruleAPI.delete((deleteConfirm.item as Rule).id);
+      await ruleAPI.removeRule((deleteConfirm.item as Rule).id);
       await loadData();
       setDeleteConfirm(null);
     } catch (err) {
@@ -173,17 +196,25 @@ export function RegulyTab(): JSX.Element {
       setIsSaving(true);
       setError(null);
 
-      const payload = {
-        etat: data.etat,
-        ...(data.max_dziennie !== undefined ? { max_dziennie: data.max_dziennie } : {}),
-        ...(data.max_tygodniowo !== undefined ? { max_tygodniowo: data.max_tygodniowo } : {}),
-        ...(data.max_miesiecznie !== undefined ? { max_miesiecznie: data.max_miesiecznie } : {}),
-        ...(data.max_kwartalnie !== undefined ? { max_kwartalnie: data.max_kwartalnie } : {}),
-      };
-
       if (selectedLimit?.id) {
+        const payload: UpdateHourLimitInput = {
+          etat: data.etat,
+          ...(data.max_dziennie !== undefined ? { max_dziennie: data.max_dziennie } : {}),
+          ...(data.max_tygodniowo !== undefined ? { max_tygodniowo: data.max_tygodniowo } : {}),
+          ...(data.max_miesięcznie !== undefined ? { max_miesięcznie: (data as any).max_miesięcznie } : {}),
+          ...(data.max_kwartalnie !== undefined ? { max_kwartalnie: data.max_kwartalnie } : {}),
+        };
         await hourLimitAPI.update(selectedLimit.id, payload);
       } else {
+        // Create requires all fields present (type CreateHourLimitInput)
+        const payload: CreateHourLimitInput = {
+          etat: data.etat,
+          max_dziennie: data.max_dziennie ?? 0,
+          max_tygodniowo: data.max_tygodniowo ?? 0,
+          // cast to any to access diacritic key
+          max_miesięcznie: (data as any).max_miesięcznie ?? 0,
+          max_kwartalnie: data.max_kwartalnie ?? 0,
+        };
         await hourLimitAPI.create(payload);
       }
 
@@ -204,7 +235,7 @@ export function RegulyTab(): JSX.Element {
     try {
       setError(null);
       setIsSaving(true);
-      await hourLimitAPI.delete((deleteConfirm.item as HourLimit).id);
+      await hourLimitAPI.removeLimit((deleteConfirm.item as HourLimit).id);
       await loadData();
       setDeleteConfirm(null);
     } catch (err) {
@@ -219,22 +250,17 @@ export function RegulyTab(): JSX.Element {
     setDeleteConfirm(null);
   };
 
-  const visibleRules = React.useMemo(
-    () => sortRules(rules, ruleSortState),
-    [rules, ruleSortState]
-  );
-
-  const visibleLimits = React.useMemo(
-    () => sortLimits(limits, limitSortState),
-    [limits, limitSortState]
-  );
+  // Derived/handlers
+  const visibleRules = React.useMemo(() => sortRules(rules, ruleSortState), [rules, ruleSortState]);
+  const visibleLimits = React.useMemo(() => sortLimits(limits, limitSortState), [limits, limitSortState]);
 
   const handleRuleSort = (columnKey: string, direction: 'asc' | 'desc') => {
     setRuleSortState({ columnKey, direction });
   };
-
   const handleLimitSort = (columnKey: string, direction: 'asc' | 'desc') => {
-    setLimitSortState({ columnKey, direction });
+    // Map legacy key to canonical if encountered
+    const canonical = columnKey === 'max_miesiecznie' ? 'max_miesięcznie' : columnKey;
+    setLimitSortState({ columnKey: canonical, direction });
   };
 
   // Loading state
@@ -258,11 +284,32 @@ export function RegulyTab(): JSX.Element {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
-            {selectedRule ? 'Edytuj regułę' : 'Dodaj regułę'}
-          </h2>
+          <h2 className="text-xl font-semibold">{selectedRule ? 'Edytuj regułę' : 'Dodaj regułę'}</h2>
         </div>
-        {error && <ErrorMessage message={error} />}
+
+        {error && (
+          <>
+            <ErrorMessage message={error} title="Błąd" />
+            <div className="flex items-center justify-between rounded-md border border-yellow-200 bg-yellow-50 p-3">
+              <p className="text-sm text-yellow-800">Nie udało się załadować danych. Spróbuj ponownie.</p>
+              <button
+                onClick={handleRetry}
+                disabled={isRetrying}
+                className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isRetrying ? (
+                  <>
+                    <LoadingSpinner size="sm" message="" />
+                    <span>Próbowanie...</span>
+                  </>
+                ) : (
+                  'Spróbuj ponownie'
+                )}
+              </button>
+            </div>
+          </>
+        )}
+
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <RuleForm
             initialData={selectedRule ?? undefined}
@@ -280,11 +327,32 @@ export function RegulyTab(): JSX.Element {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
-            {selectedLimit ? 'Edytuj limit' : 'Dodaj limit'}
-          </h2>
+          <h2 className="text-xl font-semibold">{selectedLimit ? 'Edytuj limit' : 'Dodaj limit'}</h2>
         </div>
-        {error && <ErrorMessage message={error} />}
+
+        {error && (
+          <>
+            <ErrorMessage message={error} title="Błąd" />
+            <div className="flex items-center justify-between rounded-md border border-yellow-200 bg-yellow-50 p-3">
+              <p className="text-sm text-yellow-800">Nie udało się załadować danych. Spróbuj ponownie.</p>
+              <button
+                onClick={handleRetry}
+                disabled={isRetrying}
+                className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isRetrying ? (
+                  <>
+                    <LoadingSpinner size="sm" message="" />
+                    <span>Próbowanie...</span>
+                  </>
+                ) : (
+                  'Spróbuj ponownie'
+                )}
+              </button>
+            </div>
+          </>
+        )}
+
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <LimitForm
             initialData={selectedLimit ?? undefined}
@@ -312,7 +380,28 @@ export function RegulyTab(): JSX.Element {
           </button>
         </div>
 
-        {error && <ErrorMessage message={error} />}
+        {error && (
+          <>
+            <ErrorMessage message={error} title="Błąd" />
+            <div className="mb-3 flex items-center justify-between rounded-md border border-yellow-200 bg-yellow-50 p-3">
+              <p className="text-sm text-yellow-800">Nie udało się załadować danych. Spróbuj ponownie.</p>
+              <button
+                onClick={handleRetry}
+                disabled={isRetrying}
+                className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isRetrying ? (
+                  <>
+                    <LoadingSpinner size="sm" message="" />
+                    <span>Próbowanie...</span>
+                  </>
+                ) : (
+                  'Spróbuj ponownie'
+                )}
+              </button>
+            </div>
+          </>
+        )}
 
         <div className="rounded-lg border border-gray-200 bg-white">
           <Table<HourLimit>
@@ -345,7 +434,7 @@ export function RegulyTab(): JSX.Element {
                 key: 'max_miesięcznie',
                 label: 'Max miesiąc (h)',
                 sortable: true,
-                render: (limit) => limit.max_miesięcznie ?? '—',
+                render: (limit) => (limit as any).max_miesięcznie ?? '—',
               },
               {
                 key: 'max_kwartalnie',
@@ -362,12 +451,7 @@ export function RegulyTab(): JSX.Element {
                     title="Edytuj limit"
                     className="text-blue-600 hover:text-blue-800 focus:outline-none"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
                       <path
                         fillRule="evenodd"
@@ -381,12 +465,7 @@ export function RegulyTab(): JSX.Element {
                     title="Usuń limit"
                     className="text-red-600 hover:text-red-800 focus:outline-none"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path
                         fillRule="evenodd"
                         d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
@@ -413,7 +492,28 @@ export function RegulyTab(): JSX.Element {
           </button>
         </div>
 
-        {error && <ErrorMessage message={error} />}
+        {error && (
+          <>
+            <ErrorMessage message={error} title="Błąd" />
+            <div className="mb-3 flex items-center justify-between rounded-md border border-yellow-200 bg-yellow-50 p-3">
+              <p className="text-sm text-yellow-800">Nie udało się załadować danych. Spróbuj ponownie.</p>
+              <button
+                onClick={handleRetry}
+                disabled={isRetrying}
+                className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isRetrying ? (
+                  <>
+                    <LoadingSpinner size="sm" message="" />
+                    <span>Próbowanie...</span>
+                  </>
+                ) : (
+                  'Spróbuj ponownie'
+                )}
+              </button>
+            </div>
+          </>
+        )}
 
         <div className="rounded-lg border border-gray-200 bg-white">
           <Table<Rule>
@@ -454,12 +554,7 @@ export function RegulyTab(): JSX.Element {
                     title="Edytuj regułę"
                     className="text-blue-600 hover:text-blue-800 focus:outline-none"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
                       <path
                         fillRule="evenodd"
@@ -473,12 +568,7 @@ export function RegulyTab(): JSX.Element {
                     title="Usuń regułę"
                     className="text-red-600 hover:text-red-800 focus:outline-none"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path
                         fillRule="evenodd"
                         d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
@@ -496,6 +586,7 @@ export function RegulyTab(): JSX.Element {
       {/* Delete confirmation */}
       {deleteConfirm && (
         <ConfirmDialog
+          isOpen
           title="Potwierdź usunięcie"
           message={
             deleteConfirm.type === 'rule'
@@ -504,13 +595,10 @@ export function RegulyTab(): JSX.Element {
           }
           confirmLabel="Usuń"
           cancelLabel="Anuluj"
-          onConfirm={
-            deleteConfirm.type === 'rule'
-              ? handleConfirmRuleDelete
-              : handleConfirmLimitDelete
-          }
+          isDestructive
+          onConfirm={deleteConfirm.type === 'rule' ? handleConfirmRuleDelete : handleConfirmLimitDelete}
           onCancel={handleCancelDelete}
-          variant="danger"
+          isLoading={isSaving}
         />
       )}
     </div>

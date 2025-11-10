@@ -18,15 +18,9 @@ export const employeeFormSchema = z.object({
     .min(1, 'Nazwisko jest wymagane')
     .min(2, 'Nazwisko musi mieć co najmniej 2 znaki')
     .max(120, 'Nazwisko może mieć maksymalnie 120 znaków'),
-  stanowisko: z.enum(['Kierownik', 'Z-ca kierownika', 'SSK', 'Kasjer'], {
-    errorMap: () => ({ message: 'Wybierz stanowisko' }),
-  }),
-  status: z.enum(['Aktywny', 'Na urlopie', 'Chorobowe'], {
-    errorMap: () => ({ message: 'Wybierz status' }),
-  }),
-  etat: z.union([z.literal(1), z.literal(0.75), z.literal(0.5), z.literal(0.25)], {
-    errorMap: () => ({ message: 'Wybierz etat' }),
-  }),
+  stanowisko: z.enum(['Kierownik', 'Z-ca kierownika', 'SSK', 'Kasjer'] as const),
+  status: z.enum(['Aktywny', 'Na urlopie', 'Chorobowe'] as const),
+  etat: z.union([z.literal(1), z.literal(0.75), z.literal(0.5), z.literal(0.25)]),
 });
 
 export type EmployeeFormData = z.infer<typeof employeeFormSchema>;
@@ -82,9 +76,7 @@ export type SickLeaveFormData = z.infer<typeof sickLeaveFormSchema>;
 export const shiftParameterFormSchema = z
   .object({
     dzien_tygodnia: z.number().int().min(0).max(6, 'Wybierz dzień tygodnia (0-6)'),
-    typ_zmiany: z.enum(['Rano', 'Środek', 'Popoludniu'], {
-      errorMap: () => ({ message: 'Wybierz typ zmiany' }),
-    }),
+    typ_zmiany: z.enum(['Rano', 'Środek', 'Popoludniu'] as const),
     godzina_od: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Format: HH:MM'),
     godzina_do: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Format: HH:MM'),
     liczba_obsad: z.number().int().min(0, 'Liczba obsad musi być >= 0'),
@@ -126,12 +118,10 @@ export type HolidayFormData = z.infer<typeof holidayFormSchema>;
  * Hour limit form validation schema
  */
 export const hourLimitFormSchema = z.object({
-  etat: z.union([z.literal(1), z.literal(0.75), z.literal(0.5), z.literal(0.25)], {
-    errorMap: () => ({ message: 'Wybierz etat' }),
-  }),
+  etat: z.union([z.literal(1), z.literal(0.75), z.literal(0.5), z.literal(0.25)]),
   max_dziennie: z.number().int().min(0, 'Musi być >= 0').optional(),
   max_tygodniowo: z.number().int().min(0, 'Musi być >= 0').optional(),
-  max_miesiecznie: z.number().int().min(0, 'Musi być >= 0').optional(),
+  max_miesięcznie: z.number().int().min(0, 'Musi być >= 0').optional(),
   max_kwartalnie: z.number().int().min(0, 'Musi być >= 0').optional(),
 });
 

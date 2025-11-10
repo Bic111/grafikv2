@@ -1,4 +1,7 @@
 import React from 'react';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   DAY_NAMES,
   SHIFT_TYPES,
@@ -10,22 +13,20 @@ import {
   ErrorMessage,
   ConfirmDialog,
 } from '@/components/common';
-import {
-  ShiftParameterForm,
-  type ShiftParameterFormValue,
-} from './forms/ShiftParameterForm';
-import { shiftParameterFormSchema } from '@/types/schemas';
+import { shiftParameterInputSchema, dayFormSchema } from '@/lib/validation/schemas';
+import type { DayFormData } from '@/types/shift-parameter';
 
 type ShiftCategory = 'default' | 'lead';
 
-interface DayState {
-  defaultShifts: ShiftParameterFormValue[];
-  leadShifts: ShiftParameterFormValue[];
+/**
+ * Per-day form state for React Hook Form integration
+ */
+interface DayFormState {
+  form: ReturnType<typeof useForm<DayFormData>>;
   isExpanded: boolean;
   isSaving: boolean;
   error: string | null;
   success: string | null;
-  validationErrors: Record<string, string | null>;
 }
 
 const SHIFT_TYPE_ORDER = SHIFT_TYPES.reduce<Record<string, number>>((acc, type, index) => {
@@ -36,21 +37,10 @@ const SHIFT_TYPE_ORDER = SHIFT_TYPES.reduce<Record<string, number>>((acc, type, 
 const createLocalId = () =>
   `shift-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-const createEmptyShift = (
-  day: number,
-  shiftType: (typeof SHIFT_TYPES)[number],
-  isLead: boolean,
-): ShiftParameterFormValue => ({
-  localId: createLocalId(),
-  dzien_tygodnia: day,
-  typ_zmiany: shiftType,
-  godzina_od: '',
-  godzina_do: '',
-  liczba_obsad: 0,
-  czy_prowadzacy: isLead,
-});
-
-const mapToFormValue = (shift: ShiftParameter): ShiftParameterFormValue => ({
+/**
+ * Convert ShiftParameter from API to form-friendly ShiftFormValue
+ */
+const mapToFormValue = (shift: ShiftParameter) => ({
   localId: shift.id ?? createLocalId(),
   id: shift.id,
   dzien_tygodnia: shift.dzien_tygodnia,
@@ -61,21 +51,39 @@ const mapToFormValue = (shift: ShiftParameter): ShiftParameterFormValue => ({
   czy_prowadzacy: shift.czy_prowadzacy,
 });
 
-const sortShifts = (shifts: ShiftParameterFormValue[]): ShiftParameterFormValue[] =>
+/**
+ * Create empty shift for initial setup
+ */
+const createEmptyShift = (
+  day: number,
+  shiftType: (typeof SHIFT_TYPES)[number],
+  isLead: boolean,
+) => ({
+  localId: createLocalId(),
+  dzien_tygodnia: day,
+  typ_zmiany: shiftType,
+  godzina_od: '',
+  godzina_do: '',
+  liczba_obsad: 0,
+  czy_prowadzacy: isLead,
+});
+
+/**
+ * Sort shifts by type order, then by localId
+ */
+const sortShifts = (shifts: any[]) =>
   [...shifts].sort((a, b) => {
     const orderDiff = SHIFT_TYPE_ORDER[a.typ_zmiany] - SHIFT_TYPE_ORDER[b.typ_zmiany];
     if (orderDiff !== 0) {
       return orderDiff;
     }
-
     return a.localId.localeCompare(b.localId);
   });
 
-const ensureBaseShifts = (
-  shifts: ShiftParameterFormValue[],
-  day: number,
-  isLead: boolean,
-): ShiftParameterFormValue[] => {
+/**
+ * Ensure all three shift types are present for a category
+ */
+const ensureBaseShifts = (shifts: any[], day: number, isLead: boolean) => {
   const collection = [...shifts];
 
   SHIFT_TYPES.forEach((type) => {
@@ -88,36 +96,44 @@ const ensureBaseShifts = (
   return sortShifts(collection);
 };
 
-const createInitialDayState = (day: number): DayState => ({
+/**
+ * Create initial form data for a day
+ */
+const createInitialDayFormData = (day: number): DayFormData => ({
   defaultShifts: ensureBaseShifts([], day, false),
   leadShifts: ensureBaseShifts([], day, true),
-  isExpanded: day === 0,
-  isSaving: false,
-  error: null,
-  success: null,
-  validationErrors: {},
 });
 
-function updateCollection(
-  collection: ShiftParameterFormValue[],
-  localId: string,
-  updated: ShiftParameterFormValue,
-) {
-  return collection.map((item) => (item.localId === localId ? updated : item));
-}
-
-function removeFromCollection(
-  collection: ShiftParameterFormValue[],
-  localId: string,
-) {
-  return collection.filter((item) => item.localId !== localId);
-}
-
+/**
+ * ParametryZmianTab Component
+ *
+ * Manages shift parameter configuration for all days of the week.
+ * Uses React Hook Form with per-day form instances and Zod validation.
+ */
 export function ParametryZmianTab(): JSX.Element {
-  const [days, setDays] = React.useState<Record<number, DayState>>(() => {
-    const initial: Record<number, DayState> = {};
+  // Initialize forms for each day (must be done outside useState)
+  const formsRef = React.useRef<Record<number, ReturnType<typeof useForm<DayFormData>>>>({});
+  React.useMemo(() => {
     DAY_NAMES.forEach((_, index) => {
-      initial[index] = createInitialDayState(index);
+      if (!formsRef.current[index]) {
+        formsRef.current[index] = useForm<DayFormData>({
+          resolver: zodResolver(dayFormSchema),
+          defaultValues: createInitialDayFormData(index),
+          mode: 'onBlur',
+        });
+      }
+    });
+  }, []);
+
+  const [dayStates, setDayStates] = React.useState<Record<number, Omit<DayFormState, 'form'>>>(() => {
+    const initial: Record<number, Omit<DayFormState, 'form'>> = {};
+    DAY_NAMES.forEach((_, index) => {
+      initial[index] = {
+        isExpanded: index === 0,
+        isSaving: false,
+        error: null,
+        success: null,
+      };
     });
     return initial;
   });
@@ -134,42 +150,55 @@ export function ParametryZmianTab(): JSX.Element {
     try {
       const data = await shiftParameterAPI.getAll();
 
-      setDays((previousDays) => {
-        const byDay = new Map<number, ShiftParameterFormValue[]>();
-        data.forEach((item) => {
-          const formValue = mapToFormValue(item);
-          const collection = byDay.get(formValue.dzien_tygodnia) ?? [];
-          collection.push(formValue);
-          byDay.set(formValue.dzien_tygodnia, collection);
-        });
+      // Group by day and category
+      const byDay = new Map<number, { default: typeof data; lead: typeof data }>();
 
-        const nextState: Record<number, DayState> = {};
-        DAY_NAMES.forEach((_, dayIndex) => {
-          const existing = byDay.get(dayIndex) ?? [];
-          const defaultShifts = ensureBaseShifts(
-            existing.filter((item) => !item.czy_prowadzacy),
-            dayIndex,
-            false,
-          );
-          const leadShifts = ensureBaseShifts(
-            existing.filter((item) => item.czy_prowadzacy),
-            dayIndex,
-            true,
-          );
+      data.forEach((item) => {
+        const dayData = byDay.get(item.dzien_tygodnia) ?? { default: [], lead: [] };
+        if (item.czy_prowadzacy) {
+          dayData.lead.push(item);
+        } else {
+          dayData.default.push(item);
+        }
+        byDay.set(item.dzien_tygodnia, dayData);
+      });
 
-          const previous = previousDays[dayIndex] ?? createInitialDayState(dayIndex);
-          nextState[dayIndex] = {
-            ...previous,
+      // Update each day's form with loaded data
+      DAY_NAMES.forEach((_, dayIndex) => {
+        const dayData = byDay.get(dayIndex) ?? { default: [], lead: [] };
+        const form = formsRef.current[dayIndex];
+
+        const defaultShifts = ensureBaseShifts(
+          dayData.default.map(mapToFormValue),
+          dayIndex,
+          false,
+        );
+        const leadShifts = ensureBaseShifts(
+          dayData.lead.map(mapToFormValue),
+          dayIndex,
+          true,
+        );
+
+        // Reset form with new data
+        if (form) {
+          form.reset({
             defaultShifts,
             leadShifts,
+          });
+        }
+      });
+
+      setDayStates((previousStates) => {
+        const nextStates = { ...previousStates };
+        DAY_NAMES.forEach((_, dayIndex) => {
+          nextStates[dayIndex] = {
+            ...previousStates[dayIndex],
             isSaving: false,
             error: null,
             success: null,
-            validationErrors: {},
           };
         });
-
-        return nextState;
+        return nextStates;
       });
     } catch (error) {
       setGlobalError(getErrorMessage(error));
@@ -182,8 +211,11 @@ export function ParametryZmianTab(): JSX.Element {
     loadShiftParameters();
   }, [loadShiftParameters]);
 
+  /**
+   * Toggle day expansion state
+   */
   const handleToggleDay = (day: number) => {
-    setDays((prev) => ({
+    setDayStates((prev) => ({
       ...prev,
       [day]: {
         ...prev[day],
@@ -192,131 +224,61 @@ export function ParametryZmianTab(): JSX.Element {
     }));
   };
 
-  const updateDayState = (
-    day: number,
-    category: ShiftCategory,
-    updater: (collection: ShiftParameterFormValue[]) => ShiftParameterFormValue[],
-    resetMessages = true,
-  ) => {
-    setDays((prev) => {
-      const dayState = prev[day];
-      const targetKey = category === 'default' ? 'defaultShifts' : 'leadShifts';
-      const updatedCollection = updater(dayState[targetKey]);
+  /**
+   * Handle shift removal (with confirmation for saved shifts)
+   */
+  const handleRemoveShift = (day: number, category: ShiftCategory, index: number, shiftId?: string) => {
+    const form = formsRef.current[day];
+    if (!form) return;
 
-      const updatedValidation = { ...dayState.validationErrors };
-      updatedCollection.forEach((entry) => {
-        if (!(entry.localId in updatedValidation)) {
-          updatedValidation[entry.localId] = null;
-        }
-      });
+    const fieldArrayKey = category === 'default' ? 'defaultShifts' : 'leadShifts';
 
-      return {
-        ...prev,
-        [day]: {
-          ...dayState,
-          [targetKey]: updatedCollection,
-          validationErrors: updatedValidation,
-          ...(resetMessages
-            ? {
-                error: null,
-                success: null,
-              }
-            : {}),
-        },
-      };
-    });
-  };
-
-  const handleShiftChange = (
-    day: number,
-    category: ShiftCategory,
-    localId: string,
-  ) => (updated: ShiftParameterFormValue) => {
-    updateDayState(
-      day,
-      category,
-      (collection) =>
-        updateCollection(collection, localId, {
-          ...updated,
-          dzien_tygodnia: day,
-          czy_prowadzacy: category === 'lead',
-        }),
-    );
-
-    setDays((prev) => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        validationErrors: {
-          ...prev[day].validationErrors,
-          [localId]: null,
-        },
-      },
-    }));
-  };
-
-  const handleAddShift = (day: number, category: ShiftCategory) => {
-    updateDayState(
-      day,
-      category,
-      (collection) => {
-        const usedTypes = new Set(collection.map((item) => item.typ_zmiany));
-        const fallbackType = SHIFT_TYPES.find((type) => !usedTypes.has(type)) ?? SHIFT_TYPES[0];
-        return [
-          ...collection,
-          createEmptyShift(day, fallbackType, category === 'lead'),
-        ];
-      },
-    );
-  };
-
-  const handleRemoveShift = (
-    day: number,
-    category: ShiftCategory,
-    localId: string,
-    shiftId?: string,
-  ) => {
-    const state = days[day];
-    const targetKey = category === 'default' ? 'defaultShifts' : 'leadShifts';
-    const collection = state[targetKey];
-
-    if (collection.length <= SHIFT_TYPES.length) {
+    // Check if we can remove (must have at least 3 shifts, one per type)
+    const currentShifts = form.getValues(fieldArrayKey);
+    if (currentShifts.length <= SHIFT_TYPES.length) {
       return;
     }
 
     if (shiftId) {
+      // Confirm deletion for shifts with IDs
       setConfirmDelete({ day, shiftId });
       return;
     }
 
-    updateDayState(
-      day,
-      category,
-      (current) => removeFromCollection(current, localId),
-    );
-
-    setDays((prev) => {
-      const dayState = prev[day];
-      const nextValidation = { ...dayState.validationErrors };
-      delete nextValidation[localId];
-
-      return {
-        ...prev,
-        [day]: {
-          ...dayState,
-          validationErrors: nextValidation,
-        },
-      };
-    });
+    // Remove unsaved shift immediately by setting the array without this index
+    const updated = currentShifts.filter((_, i) => i !== index);
+    form.setValue(fieldArrayKey, updated);
   };
 
+  /**
+   * Handle adding a new shift to a category
+   */
+  const handleAddShift = (day: number, category: ShiftCategory) => {
+    const form = formsRef.current[day];
+    if (!form) return;
+
+    const fieldArrayKey = category === 'default' ? 'defaultShifts' : 'leadShifts';
+    const currentShifts = form.getValues(fieldArrayKey);
+
+    // Find available shift type
+    const usedTypes = new Set(currentShifts.map((item) => item.typ_zmiany));
+    const availableType = SHIFT_TYPES.find((type) => !usedTypes.has(type)) ?? SHIFT_TYPES[0];
+
+    // Add new shift
+    const newShift = createEmptyShift(day, availableType, category === 'lead');
+    form.setValue(fieldArrayKey, [...currentShifts, newShift]);
+  };
+
+  /**
+   * Confirm and delete a shift from the backend
+   */
   const confirmDeleteShift = async (day: number, shiftId: string) => {
     setConfirmDelete(null);
     try {
       await shiftParameterAPI.delete(shiftId);
       await loadShiftParameters();
     } catch (error) {
-      setDays((prev) => ({
+      setDayStates((prev) => ({
         ...prev,
         [day]: {
           ...prev[day],
@@ -326,44 +288,21 @@ export function ParametryZmianTab(): JSX.Element {
     }
   };
 
+  /**
+   * Save a day's shift configuration
+   * Validates with Zod, separates into CREATE/UPDATE/DELETE operations, and persists to backend
+   */
   const handleSaveDay = async (day: number) => {
-    const dayState = days[day];
-    if (!dayState) {
-      return;
-    }
+    const form = formsRef.current[day];
+    if (!form) return;
 
-    const combined = [...dayState.defaultShifts, ...dayState.leadShifts];
-    const validationErrors: Record<string, string | null> = {};
-    let hasValidationError = false;
-
-    combined.forEach((entry) => {
-      const result = shiftParameterFormSchema.safeParse({
-        dzien_tygodnia: day,
-        typ_zmiany: entry.typ_zmiany,
-        godzina_od: entry.godzina_od,
-        godzina_do: entry.godzina_do,
-        liczba_obsad: entry.liczba_obsad,
-        czy_prowadzacy: entry.czy_prowadzacy,
-      });
-
-      if (!result.success) {
-        const issue = result.error.issues[0];
-        validationErrors[entry.localId] = issue?.message ?? 'Nieprawidłowe dane';
-        hasValidationError = true;
-      } else {
-        validationErrors[entry.localId] = null;
-      }
-    });
-
-    if (hasValidationError) {
-      setDays((prev) => ({
+    // Trigger validation on all fields
+    const isValid = await form.trigger();
+    if (!isValid) {
+      setDayStates((prev) => ({
         ...prev,
         [day]: {
           ...prev[day],
-          validationErrors: {
-            ...prev[day].validationErrors,
-            ...validationErrors,
-          },
           error: 'Popraw błędy w sekcji dnia przed zapisaniem.',
           success: null,
         },
@@ -371,48 +310,52 @@ export function ParametryZmianTab(): JSX.Element {
       return;
     }
 
-    setDays((prev) => ({
+    // Set saving state
+    setDayStates((prev) => ({
       ...prev,
       [day]: {
         ...prev[day],
         isSaving: true,
         error: null,
         success: null,
-        validationErrors: {
-          ...prev[day].validationErrors,
-          ...validationErrors,
-        },
       },
     }));
 
     try {
+      const formData = form.getValues();
+      const combined = [...formData.defaultShifts, ...formData.leadShifts];
+
+      // Separate into new (no id), existing (with id), and deleted
       const createPayload = combined.filter((entry) => !entry.id);
       const updatePayload = combined.filter((entry) => entry.id);
 
-      const createPromises = createPayload.map((entry) =>
-        shiftParameterAPI.create({
-          dzien_tygodnia: day,
-          typ_zmiany: entry.typ_zmiany,
-          godzina_od: entry.godzina_od,
-          godzina_do: entry.godzina_do,
-          liczba_obsad: entry.liczba_obsad,
-          czy_prowadzacy: entry.czy_prowadzacy,
-        }),
-      );
+      // Execute all requests in parallel
+      const requests = [
+        ...createPayload.map((entry) =>
+          shiftParameterAPI.create({
+            dzien_tygodnia: day,
+            typ_zmiany: entry.typ_zmiany,
+            godzina_od: entry.godzina_od,
+            godzina_do: entry.godzina_do,
+            liczba_obsad: entry.liczba_obsad,
+            czy_prowadzacy: entry.czy_prowadzacy,
+          }),
+        ),
+        ...updatePayload.map((entry) =>
+          shiftParameterAPI.update(entry.id!, {
+            dzien_tygodnia: day,
+            typ_zmiany: entry.typ_zmiany,
+            godzina_od: entry.godzina_od,
+            godzina_do: entry.godzina_do,
+            liczba_obsad: entry.liczba_obsad,
+            czy_prowadzacy: entry.czy_prowadzacy,
+          }),
+        ),
+      ];
 
-      const updatePromises = updatePayload.map((entry) =>
-        shiftParameterAPI.update(entry.id!, {
-          dzien_tygodnia: day,
-          typ_zmiany: entry.typ_zmiany,
-          godzina_od: entry.godzina_od,
-          godzina_do: entry.godzina_do,
-          liczba_obsad: entry.liczba_obsad,
-          czy_prowadzacy: entry.czy_prowadzacy,
-        }),
-      );
+      await Promise.all(requests);
 
-      await Promise.all([...createPromises, ...updatePromises]);
-
+      // Reload data from backend to ensure consistency
       const refreshed = await shiftParameterAPI.getByDay(day);
       const defaultShifts = ensureBaseShifts(
         refreshed
@@ -429,20 +372,20 @@ export function ParametryZmianTab(): JSX.Element {
         true,
       );
 
-      setDays((prev) => ({
+      // Reset form with refreshed data
+      dayState.form.reset({ defaultShifts, leadShifts });
+
+      setDayStates((prev) => ({
         ...prev,
         [day]: {
           ...prev[day],
-          defaultShifts,
-          leadShifts,
           isSaving: false,
           success: 'Ustawienia zapisane pomyślnie.',
           error: null,
-          validationErrors: {},
         },
       }));
     } catch (error) {
-      setDays((prev) => ({
+      setDayStates((prev) => ({
         ...prev,
         [day]: {
           ...prev[day],
@@ -475,8 +418,9 @@ export function ParametryZmianTab(): JSX.Element {
 
       <div className="space-y-4">
         {DAY_NAMES.map((dayName, dayIndex) => {
-          const dayState = days[dayIndex];
-          if (!dayState) {
+          const dayState = dayStates[dayIndex];
+          const form = formsRef.current[dayIndex];
+          if (!dayState || !form) {
             return null;
           }
 
@@ -484,9 +428,8 @@ export function ParametryZmianTab(): JSX.Element {
             category: ShiftCategory,
             heading: string,
             description: string,
-            collection: ShiftParameterFormValue[],
           ) => {
-            const targetKey = category === 'default' ? 'defaultShifts' : 'leadShifts';
+            const shifts = form.watch(category === 'default' ? 'defaultShifts' : 'leadShifts');
 
             return (
               <div className="space-y-4">
@@ -505,29 +448,146 @@ export function ParametryZmianTab(): JSX.Element {
                 </div>
 
                 <div className="space-y-4">
-                  {collection.map((shift) => {
-                    const validationMessage = dayState.validationErrors[shift.localId] ?? null;
-                    const canRemove = dayState[targetKey].length > SHIFT_TYPES.length;
+                  {shifts.map((shift, index) => {
+                    const fieldName = (category === 'default' ? 'defaultShifts' : 'leadShifts') as const;
+                    const errors = form.formState.errors[fieldName]?.[index];
+                    const canRemove = shifts.length > SHIFT_TYPES.length;
+
                     return (
-                      <ShiftParameterForm
-                        key={shift.localId}
-                        value={shift}
-                        onChange={handleShiftChange(dayIndex, category, shift.localId)}
-                        onRemove={
-                          canRemove
-                            ? () =>
+                      <div key={shift.localId} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                        <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {shift.typ_zmiany}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {category === 'lead' ? 'Prowadzący zmianę' : 'Domyślne ustawienie zmiany'}
+                            </p>
+                          </div>
+                          {canRemove && (
+                            <button
+                              type="button"
+                              onClick={() =>
                                 handleRemoveShift(
                                   dayIndex,
                                   category,
-                                  shift.localId,
+                                  index,
                                   shift.id,
                                 )
-                            : undefined
-                        }
-                        disabled={dayState.isSaving}
-                        isLead={category === 'lead'}
-                        error={validationMessage}
-                      />
+                              }
+                              disabled={dayState.isSaving}
+                              className="self-start rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 md:self-auto"
+                            >
+                              Usuń
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="mt-4 grid gap-4 md:grid-cols-4">
+                          <div className="space-y-1">
+                            <label className="block text-xs font-medium text-gray-600">
+                              Typ zmiany
+                            </label>
+                            <Controller
+                              control={form.control}
+                              name={`${fieldName}.${index}.typ_zmiany`}
+                              render={({ field }) => (
+                                <select
+                                  {...field}
+                                  disabled={dayState.isSaving}
+                                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+                                >
+                                  {SHIFT_TYPES.map((type) => (
+                                    <option key={type} value={type}>
+                                      {type}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-xs font-medium text-gray-600">
+                              Godzina od
+                            </label>
+                            <Controller
+                              control={form.control}
+                              name={`${fieldName}.${index}.godzina_od`}
+                              render={({ field, fieldState: { error } }) => (
+                                <>
+                                  <input
+                                    {...field}
+                                    type="time"
+                                    disabled={dayState.isSaving}
+                                    className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 ${
+                                      error ? 'border-red-500' : 'border-gray-300'
+                                    }`}
+                                    onBlur={() => form.trigger(`${fieldName}.${index}`)}
+                                  />
+                                  {error && (
+                                    <p className="text-xs text-red-600">{error.message}</p>
+                                  )}
+                                </>
+                              )}
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-xs font-medium text-gray-600">
+                              Godzina do
+                            </label>
+                            <Controller
+                              control={form.control}
+                              name={`${fieldName}.${index}.godzina_do`}
+                              render={({ field, fieldState: { error } }) => (
+                                <>
+                                  <input
+                                    {...field}
+                                    type="time"
+                                    disabled={dayState.isSaving}
+                                    className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 ${
+                                      error ? 'border-red-500' : 'border-gray-300'
+                                    }`}
+                                    onBlur={() => form.trigger(`${fieldName}.${index}`)}
+                                  />
+                                  {error && (
+                                    <p className="text-xs text-red-600">{error.message}</p>
+                                  )}
+                                </>
+                              )}
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-xs font-medium text-gray-600">
+                              Liczba pracowników
+                            </label>
+                            <Controller
+                              control={form.control}
+                              name={`${fieldName}.${index}.liczba_obsad`}
+                              render={({ field, fieldState: { error } }) => (
+                                <>
+                                  <input
+                                    {...field}
+                                    type="number"
+                                    min="0"
+                                    disabled={dayState.isSaving}
+                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                    className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 ${
+                                      error ? 'border-red-500' : 'border-gray-300'
+                                    }`}
+                                    onBlur={() => form.trigger(`${fieldName}.${index}`)}
+                                  />
+                                  {error && (
+                                    <p className="text-xs text-red-600">{error.message}</p>
+                                  )}
+                                </>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -562,14 +622,12 @@ export function ParametryZmianTab(): JSX.Element {
                     'default',
                     'Domyślne ustawienia zmian',
                     'Standardowa obsada zmian: Rano, Środek, Popołudnie.',
-                    dayState.defaultShifts,
                   )}
 
                   {renderSection(
                     'lead',
                     'Prowadzący zmianę',
                     'Osoby prowadzące każdą zmianę (min. 1 osoba na zmianę).',
-                    dayState.leadShifts,
                   )}
 
                   {dayState.error && <ErrorMessage message={dayState.error} />}

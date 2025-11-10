@@ -12,7 +12,18 @@
       "Bash(else echo \"NO_CHECKLISTS\")",
       "Bash(fi)",
       "Bash(git rev-parse:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "mcp__zen__planner",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(findstr:*)",
+      "Bash(git fetch:*)",
+      "Bash(powershell -Command \".\\.specify\\scripts\\powershell\\create-new-feature.ps1 -Json -Number 4 -ShortName ''shift-parameters'' ''Refactor ParametryZmianTab.tsx to use React Hook Form + Zod validation''\")",
+      "Bash(powershell -Command \".\\.specify\\scripts\\powershell\\check-prerequisites.ps1 -Json -PathsOnly\")",
+      "Bash(ls:*)",
+      "Bash(powershell:*)",
+      "Bash(if [ -d \"D:\\graf\\Grafikv2\\specs\\004-shift-parameters\\checklists\" ])",
+      "Bash(then ls \"D:\\graf\\Grafikv2\\specs\\004-shift-parameters\\checklists\")"
     ],
     "deny": [],
     "ask": []

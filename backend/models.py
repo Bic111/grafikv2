@@ -174,3 +174,15 @@ class WzorceHistoryczne(Base):
     id = Column(Integer, primary_key=True, index=True)
     nazwa_wzorca = Column(String(120), nullable=False, unique=True)
     dane_grafiku = Column(JSON, nullable=False)
+
+
+class ParametryZmiany(Base):
+    __tablename__ = "parametry_zmiany"
+
+    id = Column(Integer, primary_key=True, index=True)
+    dzien_tygodnia = Column(Integer, nullable=False)  # 0-6 (Monday-Sunday)
+    typ_zmiany = Column(String(120), nullable=False)  # Rano, Środek, Popoludniu
+    godzina_od = Column(String(5), nullable=False)  # HH:MM format
+    godzina_do = Column(String(5), nullable=False)  # HH:MM format
+    liczba_obsad = Column(Integer, nullable=True)
+    czy_prowadzacy = Column(Boolean, default=False)

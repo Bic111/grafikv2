@@ -11,6 +11,7 @@ import type {
   UpdateHourLimitInput,
 } from '@/types';
 import { ApiClient } from './client';
+import { normalizeHourLimit, normalizeHourLimits, prepareForApi } from '@/utils/hour-limit-normalizer';
 
 /**
  * RuleAPI client
@@ -47,7 +48,7 @@ class RuleAPI extends ApiClient {
   /**
    * Delete a rule
    */
-  async delete(id: string): Promise<void> {
+  async removeRule(id: string): Promise<void> {
     return this.delete<void>(`/api/rules/${id}`);
   }
 
@@ -74,41 +75,46 @@ class HourLimitAPI extends ApiClient {
    * Get all hour limits
    */
   async getAll(): Promise<HourLimit[]> {
-    return this.get<HourLimit[]>('/api/hour-limits');
+    const data = await this.get<HourLimit[]>('/api/hour-limits');
+    return normalizeHourLimits(data) as HourLimit[];
   }
 
   /**
    * Get a single hour limit by ID
    */
   async getById(id: string): Promise<HourLimit> {
-    return this.get<HourLimit>(`/api/hour-limits/${id}`);
+    const data = await this.get<HourLimit>(`/api/hour-limits/${id}`);
+    return normalizeHourLimit(data) as HourLimit;
   }
 
   /**
    * Get hour limit by employment percentage
    */
   async getByEtat(etat: 1.0 | 0.75 | 0.5 | 0.25): Promise<HourLimit> {
-    return this.get<HourLimit>(`/api/hour-limits?etat=${etat}`);
+    const data = await this.get<HourLimit>(`/api/hour-limits?etat=${etat}`);
+    return normalizeHourLimit(data) as HourLimit;
   }
 
   /**
    * Create a new hour limit
    */
   async create(data: CreateHourLimitInput): Promise<HourLimit> {
-    return this.post<HourLimit>('/api/hour-limits', data);
+    const preparedData = prepareForApi(data);
+    return this.post<HourLimit>('/api/hour-limits', preparedData);
   }
 
   /**
    * Update an existing hour limit
    */
   async update(id: string, data: UpdateHourLimitInput): Promise<HourLimit> {
-    return this.put<HourLimit>(`/api/hour-limits/${id}`, data);
+    const preparedData = prepareForApi(data);
+    return this.put<HourLimit>(`/api/hour-limits/${id}`, preparedData);
   }
 
   /**
    * Delete an hour limit
    */
-  async delete(id: string): Promise<void> {
+  async removeLimit(id: string): Promise<void> {
     return this.delete<void>(`/api/hour-limits/${id}`);
   }
 
@@ -122,7 +128,7 @@ class HourLimitAPI extends ApiClient {
   ): Promise<boolean> {
     try {
       const limit = await this.getByEtat(etat);
-      const limitKey = `max_${periodType === 'quarterly' ? 'kwartalnie' : periodType === 'monthly' ? 'miesięcznie' : periodType === 'weekly' ? 'tygodniowo' : 'dziennie'}`;
+      const limitKey = `max_${periodType === 'quarterly' ? 'kwartalnie' : periodType === 'monthly' ? 'miesiecznie' : periodType === 'weekly' ? 'tygodniowo' : 'dziennie'}`;
       const maxHours = limit[limitKey as keyof HourLimit] as number;
       return hours > maxHours;
     } catch {

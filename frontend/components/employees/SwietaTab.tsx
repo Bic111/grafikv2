@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Holiday } from '@/types';
 import { holidayAPI, getErrorMessage } from '@/services/api';
-import { Table, TableSkeleton, ErrorMessage, ConfirmDialog, type TableSortState } from '@/components/common';
+import { Table, TableSkeleton, ErrorMessage, ConfirmDialog, LoadingSpinner, type TableSortState } from '@/components/common';
 import { HolidayForm } from './forms/HolidayForm';
 import type { HolidayFormData } from '@/types/schemas';
 import { formatDateToPL } from '@/utils/dates';
@@ -28,11 +28,12 @@ function sortHolidays(data: Holiday[], sortState: TableSortState): Holiday[] {
   return sorted;
 }
 
-export function SwietaTab(): JSX.Element {
+export function SwietaTab(): React.ReactElement {
   const [holidays, setHolidays] = React.useState<Holiday[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [selectedHoliday, setSelectedHoliday] = React.useState<Holiday | null>(null);
   const [deleteConfirm, setDeleteConfirm] = React.useState<Holiday | null>(null);
@@ -56,6 +57,15 @@ export function SwietaTab(): JSX.Element {
       console.error('Error loading holidays:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    try {
+      setIsRetrying(true);
+      await loadHolidays();
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -151,7 +161,28 @@ export function SwietaTab(): JSX.Element {
             {selectedHoliday ? 'Edytuj święto' : 'Dodaj święto'}
           </h2>
         </div>
-        {error && <ErrorMessage message={error} />}
+        {error && (
+        <>
+          <ErrorMessage message={error} title="Błąd" />
+          <div className="flex items-center justify-between rounded-md border border-yellow-200 bg-yellow-50 p-3">
+            <p className="text-sm text-yellow-800">Nie udało się załadować świąt. Spróbuj ponownie.</p>
+            <button
+              onClick={handleRetry}
+              disabled={isRetrying}
+              className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isRetrying ? (
+                <>
+                  <LoadingSpinner size="sm" message="" />
+                  <span>Próbowanie...</span>
+                </>
+              ) : (
+                'Spróbuj ponownie'
+              )}
+            </button>
+          </div>
+        </>
+      )}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <HolidayForm
             initialData={selectedHoliday ?? undefined}
@@ -176,7 +207,28 @@ export function SwietaTab(): JSX.Element {
         </button>
       </div>
 
-      {error && <ErrorMessage message={error} />}
+      {error && (
+        <>
+          <ErrorMessage message={error} title="Błąd" />
+          <div className="flex items-center justify-between rounded-md border border-yellow-200 bg-yellow-50 p-3">
+            <p className="text-sm text-yellow-800">Nie udało się załadować świąt. Spróbuj ponownie.</p>
+            <button
+              onClick={handleRetry}
+              disabled={isRetrying}
+              className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isRetrying ? (
+                <>
+                  <LoadingSpinner size="sm" message="" />
+                  <span>Próbowanie...</span>
+                </>
+              ) : (
+                'Spróbuj ponownie'
+              )}
+            </button>
+          </div>
+        </>
+      )}
 
       <div className="rounded-lg border border-gray-200 bg-white">
         <Table<Holiday>
@@ -258,13 +310,15 @@ export function SwietaTab(): JSX.Element {
 
       {deleteConfirm && (
         <ConfirmDialog
+          isOpen
           title="Potwierdź usunięcie"
           message={`Czy na pewno chcesz usunąć święto "${deleteConfirm.nazwa}"?`}
           confirmLabel="Usuń"
           cancelLabel="Anuluj"
+          isDestructive
           onConfirm={handleConfirmDelete}
           onCancel={handleCancelDelete}
-          variant="danger"
+          isLoading={isSaving}
         />
       )}
     </div>
