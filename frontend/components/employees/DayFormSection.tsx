@@ -1,7 +1,39 @@
 /**
- * DayFormSection Component
- * Manages a single day's shift parameters with dynamic field array management.
- * Uses React Hook Form's useFieldArray for proper add/remove shift functionality.
+ * DayFormSection Component - T031: JSDoc Documentation
+ *
+ * Manages a single day's shift parameters with React Hook Form + useFieldArray integration.
+ *
+ * **Features:**
+ * - T013/T014: useFieldArray for defaultShifts and leadShifts dynamic arrays
+ * - T015: "+ dodaj kolejną zmianę" button for adding shifts
+ * - T016: Confirmation dialog for deleting saved shifts (with ID)
+ * - T017: Immediate removal for unsaved shifts (no ID)
+ * - T018: Prevents removal if less than 3 shifts per category remain
+ * - T019: Save button disabled during submission
+ * - T008: Error messages displayed next to each field
+ * - T009: Blur-triggered validation for real-time feedback
+ *
+ * **Form Fields per Shift:**
+ * - typ_zmiany: Select dropdown (Rano, Środek, Popołudnie)
+ * - godzina_od: Time input with blur validation
+ * - godzina_do: Time input with cross-field validation (must be > godzina_od)
+ * - liczba_obsad: Number input for staff count
+ *
+ * **State Management:**
+ * - form: React Hook Form instance (passed from parent)
+ * - isSaving: Disables interactions during save
+ * - error/success: Messages displayed per day
+ * - isExpanded: Toggle day section visibility
+ *
+ * **Sections:**
+ * 1. Domyślne ustawienia zmian (default shifts - czy_prowadzacy=false)
+ * 2. Prowadzący zmianę (lead shifts - czy_prowadzacy=true)
+ *
+ * **Validation:**
+ * - Time format: HH:MM (00:00 - 23:59)
+ * - Zod validation with Polish error messages
+ * - Cross-field: godzina_od < godzina_do
+ * - Minimum 3 shifts per category enforced
  */
 
 import React from 'react';
@@ -10,17 +42,17 @@ import { SHIFT_TYPES } from '@/types';
 import type { DayFormData } from '@/types/shift-parameter';
 
 export interface DayFormSectionProps {
-  dayIndex: number;
+  dayIndex: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   dayName: string;
   form: UseFormReturn<DayFormData>;
   isSaving: boolean;
   error: string | null;
   success: string | null;
   isExpanded: boolean;
-  onToggleDay: (dayIndex: number) => void;
-  onAddShift: (dayIndex: number, category: 'default' | 'lead') => void;
-  onRemoveShift: (dayIndex: number, category: 'default' | 'lead', index: number, shiftId?: string) => void;
-  onSaveDay?: (dayIndex: number) => void | Promise<void>;
+  onToggleDay: (dayIndex: 0 | 1 | 2 | 3 | 4 | 5 | 6) => void;
+  onAddShift: (dayIndex: 0 | 1 | 2 | 3 | 4 | 5 | 6, category: 'default' | 'lead') => void;
+  onRemoveShift: (dayIndex: 0 | 1 | 2 | 3 | 4 | 5 | 6, category: 'default' | 'lead', index: number, shiftId?: string) => void;
+  onSaveDay?: (dayIndex: 0 | 1 | 2 | 3 | 4 | 5 | 6) => void | Promise<void>;
 }
 
 /**
@@ -58,8 +90,8 @@ export function DayFormSection({
     description: string,
     fieldArray: ReturnType<typeof useFieldArray>,
   ) => {
-    const shifts = form.watch(category === 'default' ? 'defaultShifts' : 'leadShifts');
-    const fieldName = (category === 'default' ? 'defaultShifts' : 'leadShifts') as const;
+    const fieldName = category === 'default' ? ('defaultShifts' as const) : ('leadShifts' as const);
+    const shifts = form.watch(fieldName);
 
     // T015: "+ dodaj kolejną zmianę" button functionality
     const handleAddClick = () => {

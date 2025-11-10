@@ -71,11 +71,23 @@ export const SHIFT_TYPES = ['Rano', 'Środek', 'Popoludniu'];
 /**
  * Form representation of a single shift (with localId for unsaved shifts)
  */
-export interface ShiftFormValue extends Omit<ShiftParameter, 'id'> {
+export interface ShiftFormValue {
   /** Local ID for unsaved shifts (used by React Hook Form) */
   localId: string;
   /** Backend ID for saved shifts (optional) */
   id?: string;
+  /** Day of the week (0=Monday, 6=Sunday) */
+  dzien_tygodnia: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  /** Type of shift */
+  typ_zmiany: 'Rano' | 'Środek' | 'Popoludniu';
+  /** Shift start time (HH:MM format) */
+  godzina_od: string;
+  /** Shift end time (HH:MM format) */
+  godzina_do: string;
+  /** Number of positions to fill for this shift */
+  liczba_obsad: number;
+  /** Whether this shift requires a shift lead */
+  czy_prowadzacy: boolean;
 }
 
 /**

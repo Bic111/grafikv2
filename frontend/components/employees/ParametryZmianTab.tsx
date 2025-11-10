@@ -14,7 +14,7 @@ import {
   ConfirmDialog,
 } from '@/components/common';
 import { shiftParameterInputSchema, dayFormSchema } from '@/lib/validation/schemas';
-import type { DayFormData } from '@/types/shift-parameter';
+import type { DayFormData, ShiftFormValue } from '@/types/shift-parameter';
 import { DayFormSection } from './DayFormSection';
 
 type ShiftCategory = 'default' | 'lead';
@@ -41,11 +41,11 @@ const createLocalId = () =>
 /**
  * Convert ShiftParameter from API to form-friendly ShiftFormValue
  */
-const mapToFormValue = (shift: ShiftParameter) => ({
+const mapToFormValue = (shift: ShiftParameter): DayFormData['defaultShifts'][number] => ({
   localId: shift.id ?? createLocalId(),
   id: shift.id,
-  dzien_tygodnia: shift.dzien_tygodnia,
-  typ_zmiany: shift.typ_zmiany,
+  dzien_tygodnia: shift.dzien_tygodnia as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+  typ_zmiany: shift.typ_zmiany as 'Rano' | 'Środek' | 'Popoludniu',
   godzina_od: shift.godzina_od,
   godzina_do: shift.godzina_do,
   liczba_obsad: shift.liczba_obsad,
@@ -56,10 +56,10 @@ const mapToFormValue = (shift: ShiftParameter) => ({
  * Create empty shift for initial setup
  */
 const createEmptyShift = (
-  day: number,
-  shiftType: (typeof SHIFT_TYPES)[number],
+  day: 0 | 1 | 2 | 3 | 4 | 5 | 6,
+  shiftType: 'Rano' | 'Środek' | 'Popoludniu',
   isLead: boolean,
-) => ({
+): ShiftFormValue => ({
   localId: createLocalId(),
   dzien_tygodnia: day,
   typ_zmiany: shiftType,
@@ -84,13 +84,13 @@ const sortShifts = (shifts: any[]) =>
 /**
  * Ensure all three shift types are present for a category
  */
-const ensureBaseShifts = (shifts: any[], day: number, isLead: boolean) => {
+const ensureBaseShifts = (shifts: any[], day: 0 | 1 | 2 | 3 | 4 | 5 | 6, isLead: boolean) => {
   const collection = [...shifts];
 
   SHIFT_TYPES.forEach((type) => {
     const hasType = collection.some((item) => item.typ_zmiany === type);
     if (!hasType) {
-      collection.push(createEmptyShift(day, type, isLead));
+      collection.push(createEmptyShift(day, type as 'Rano' | 'Środek' | 'Popoludniu', isLead));
     }
   });
 
@@ -100,16 +100,50 @@ const ensureBaseShifts = (shifts: any[], day: number, isLead: boolean) => {
 /**
  * Create initial form data for a day
  */
-const createInitialDayFormData = (day: number): DayFormData => ({
+const createInitialDayFormData = (day: 0 | 1 | 2 | 3 | 4 | 5 | 6): DayFormData => ({
   defaultShifts: ensureBaseShifts([], day, false),
   leadShifts: ensureBaseShifts([], day, true),
 });
 
 /**
- * ParametryZmianTab Component
+ * ParametryZmianTab Component - T031: JSDoc Documentation
  *
- * Manages shift parameter configuration for all days of the week.
- * Uses React Hook Form with per-day form instances and Zod validation.
+ * Manages shift parameter configuration for all days of the week with React Hook Form + Zod validation.
+ *
+ * **Features:**
+ * - T020: Loads shift parameters from backend via GET /shift-parameters
+ * - T021: Maps API data into defaultShifts and leadShifts arrays grouped by day
+ * - T022: Resets form with loaded data using form.reset()
+ * - T023: Form submission separates shifts into CREATE/UPDATE operations
+ * - T024: Executes all API requests in parallel using Promise.all()
+ * - T025: Handles API errors with user-friendly messages
+ * - T026: Refreshes form data after successful save from backend
+ * - T027: Handles 404 errors for shifts deleted by other users
+ * - T013: Manages defaultShifts array via useFieldArray
+ * - T014: Manages leadShifts array via useFieldArray
+ * - T015: "+ dodaj kolejną zmianę" button to add new shifts
+ * - T016/T017: Confirmation dialogs for deletion (saved shifts only)
+ * - T018: Validates minimum 3 shifts per category (Rano, Środek, Popołudnie)
+ * - T019: Disables save button during submission (prevent double-submit)
+ *
+ * **Architecture:**
+ * - Per-day form instances managed via useRef + useMemo (avoids hooks-in-map violation)
+ * - One form per day allows independent validation and saving
+ * - useFieldArray for dynamic shift array management
+ * - Zod validation with Polish error messages
+ * - Controller for time inputs and numeric fields
+ *
+ * **State Management:**
+ * - formsRef: Stores per-day RHF instances
+ * - dayStates: UI state (expanded, saving, error, success) per day
+ * - globalError: API load errors
+ * - confirmDelete: Shift deletion confirmation dialog state
+ *
+ * **Error Handling:**
+ * - Load errors displayed globally
+ * - Save errors kept per day
+ * - Form data preserved on error (not cleared)
+ * - Network timeout messages via getErrorMessage()
  */
 export function ParametryZmianTab(): JSX.Element {
   // Initialize forms for each day (must be done outside useState)
@@ -119,7 +153,7 @@ export function ParametryZmianTab(): JSX.Element {
       if (!formsRef.current[index]) {
         formsRef.current[index] = useForm<DayFormData>({
           resolver: zodResolver(dayFormSchema),
-          defaultValues: createInitialDayFormData(index),
+          defaultValues: createInitialDayFormData(index as 0 | 1 | 2 | 3 | 4 | 5 | 6),
           mode: 'onBlur',
         });
       }
@@ -176,15 +210,16 @@ export function ParametryZmianTab(): JSX.Element {
       DAY_NAMES.forEach((_, dayIndex) => {
         const dayData = byDay.get(dayIndex) ?? { default: [], lead: [] };
         const form = formsRef.current[dayIndex];
+        const day = dayIndex as 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
         const defaultShifts = ensureBaseShifts(
           dayData.default.map(mapToFormValue),
-          dayIndex,
+          day,
           false,
         );
         const leadShifts = ensureBaseShifts(
           dayData.lead.map(mapToFormValue),
-          dayIndex,
+          day,
           true,
         );
 
@@ -224,7 +259,7 @@ export function ParametryZmianTab(): JSX.Element {
   /**
    * Toggle day expansion state
    */
-  const handleToggleDay = (day: number) => {
+  const handleToggleDay = (day: 0 | 1 | 2 | 3 | 4 | 5 | 6) => {
     setDayStates((prev) => ({
       ...prev,
       [day]: {
@@ -238,7 +273,7 @@ export function ParametryZmianTab(): JSX.Element {
    * T016/T017: Handle shift removal with confirmation for saved shifts
    * Immediate removal for unsaved shifts (no ID)
    */
-  const handleRemoveShift = (day: number, category: ShiftCategory, index: number, shiftId?: string) => {
+  const handleRemoveShift = (day: 0 | 1 | 2 | 3 | 4 | 5 | 6, category: ShiftCategory, index: number, shiftId?: string) => {
     const form = formsRef.current[day];
     if (!form) return;
 
@@ -264,7 +299,7 @@ export function ParametryZmianTab(): JSX.Element {
   /**
    * T015: Handle adding a new shift to a category
    */
-  const handleAddShift = (day: number, category: ShiftCategory) => {
+  const handleAddShift = (day: 0 | 1 | 2 | 3 | 4 | 5 | 6, category: ShiftCategory) => {
     const form = formsRef.current[day];
     if (!form) return;
 
@@ -273,7 +308,7 @@ export function ParametryZmianTab(): JSX.Element {
 
     // Find available shift type
     const usedTypes = new Set(currentShifts.map((item) => item.typ_zmiany));
-    const availableType = SHIFT_TYPES.find((type) => !usedTypes.has(type)) ?? SHIFT_TYPES[0];
+    const availableType = (SHIFT_TYPES.find((type) => !usedTypes.has(type)) ?? SHIFT_TYPES[0]) as 'Rano' | 'Środek' | 'Popoludniu';
 
     // Add new shift
     const newShift = createEmptyShift(day, availableType, category === 'lead');
@@ -283,7 +318,7 @@ export function ParametryZmianTab(): JSX.Element {
   /**
    * Confirm and delete a shift from the backend
    */
-  const confirmDeleteShift = async (day: number, shiftId: string) => {
+  const confirmDeleteShift = async (day: 0 | 1 | 2 | 3 | 4 | 5 | 6, shiftId: string) => {
     setConfirmDelete(null);
     try {
       await shiftParameterAPI.delete(shiftId);
@@ -303,7 +338,7 @@ export function ParametryZmianTab(): JSX.Element {
    * T023-T027: Save a day's shift configuration
    * Validates with Zod, separates into CREATE/UPDATE operations, persists to backend, and handles errors
    */
-  const handleSaveDay = async (day: number) => {
+  const handleSaveDay = async (day: 0 | 1 | 2 | 3 | 4 | 5 | 6) => {
     const form = formsRef.current[day];
     if (!form) return;
 
@@ -345,7 +380,7 @@ export function ParametryZmianTab(): JSX.Element {
         ...createPayload.map((entry) =>
           shiftParameterAPI.create({
             dzien_tygodnia: day,
-            typ_zmiany: entry.typ_zmiany,
+            typ_zmiany: entry.typ_zmiany as 'Rano' | 'Środek' | 'Popoludniu',
             godzina_od: entry.godzina_od,
             godzina_do: entry.godzina_do,
             liczba_obsad: entry.liczba_obsad,
@@ -355,7 +390,7 @@ export function ParametryZmianTab(): JSX.Element {
         ...updatePayload.map((entry) =>
           shiftParameterAPI.update(entry.id!, {
             dzien_tygodnia: day,
-            typ_zmiany: entry.typ_zmiany,
+            typ_zmiany: entry.typ_zmiany as 'Rano' | 'Środek' | 'Popoludniu',
             godzina_od: entry.godzina_od,
             godzina_do: entry.godzina_do,
             liczba_obsad: entry.liczba_obsad,
@@ -433,6 +468,7 @@ export function ParametryZmianTab(): JSX.Element {
 
       <div className="space-y-4">
         {DAY_NAMES.map((dayName, dayIndex) => {
+          const day = dayIndex as 0 | 1 | 2 | 3 | 4 | 5 | 6;
           const dayState = dayStates[dayIndex];
           const form = formsRef.current[dayIndex];
           if (!dayState || !form) {
@@ -442,7 +478,7 @@ export function ParametryZmianTab(): JSX.Element {
           return (
             <DayFormSection
               key={dayName}
-              dayIndex={dayIndex}
+              dayIndex={day}
               dayName={dayName}
               form={form}
               isSaving={dayState.isSaving}
@@ -466,7 +502,7 @@ export function ParametryZmianTab(): JSX.Element {
           confirmLabel="Usuń"
           cancelLabel="Anuluj"
           isDestructive
-          onConfirm={() => confirmDeleteShift(confirmDelete.day, confirmDelete.shiftId)}
+          onConfirm={() => confirmDeleteShift(confirmDelete.day as 0 | 1 | 2 | 3 | 4 | 5 | 6, confirmDelete.shiftId)}
           onCancel={() => setConfirmDelete(null)}
         />
       )}

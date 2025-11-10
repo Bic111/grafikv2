@@ -23,7 +23,8 @@
       "Bash(ls:*)",
       "Bash(powershell:*)",
       "Bash(if [ -d \"D:\\graf\\Grafikv2\\specs\\004-shift-parameters\\checklists\" ])",
-      "Bash(then ls \"D:\\graf\\Grafikv2\\specs\\004-shift-parameters\\checklists\")"
+      "Bash(then ls \"D:\\graf\\Grafikv2\\specs\\004-shift-parameters\\checklists\")",
+      "Bash(cd:*)"
     ],
     "deny": [],
     "ask": []
