@@ -24,9 +24,6 @@ if (!(Test-Path $frontendScript)) {
 Write-Host "=== WorkSchedule PL - Launcher ===" -ForegroundColor Green
 Write-Host ""
 
-Write-Host "=== WorkSchedule PL - Launcher ===" -ForegroundColor Green
-Write-Host ""
-
 # Handle special modes
 if ($BackendOnly) {
     Write-Host "Uruchamiam tylko backend..." -ForegroundColor Cyan
