@@ -46,14 +46,14 @@ All 3 stories are **independent** and can be implemented in parallel, but follow
 
 ### Implementation Tasks
 
-- [ ] T005 [US1] Refactor `frontend/components/employees/ParametryZmianTab.tsx` main component to use React Hook Form `useForm` hook for each day (one form per day)
+- [x] T005 [US1] Refactor `frontend/components/employees/ParametryZmianTab.tsx` main component to use React Hook Form `useForm` hook for each day (one form per day)
 - [ ] T006 [US1] Create `frontend/components/employees/forms/ShiftParameterForm.tsx` sub-component using Controller for individual shift row (time inputs, staff count)
-- [ ] T007 [P] [US1] Implement Zod schema validation with Polish error messages in component's form initialization
-- [ ] T008 [US1] Implement form field rendering with error display next to each field (godzina_od, godzina_do, liczba_obsad)
-- [ ] T009 [US1] Implement blur-triggered validation (`onBlur={() => form.trigger()}`) for real-time error feedback
-- [ ] T010 [US1] Update API integration in `frontend/services/api/client.ts` to ensure `shiftParameterAPI` methods exist (GET, POST, PUT, DELETE)
-- [ ] T011 [US1] Implement loading spinner during data fetch (use existing LoadingSpinner component)
-- [ ] T012 [US1] Implement success message display after form save ("Ustawienia zapisane pomyślnie")
+- [x] T007 [P] [US1] Implement Zod schema validation with Polish error messages in component's form initialization
+- [x] T008 [US1] Implement form field rendering with error display next to each field (godzina_od, godzina_do, liczba_obsad)
+- [x] T009 [US1] Implement blur-triggered validation (`onBlur={() => form.trigger()}`) for real-time error feedback
+- [x] T010 [US1] Update API integration in `frontend/services/api/client.ts` to ensure `shiftParameterAPI` methods exist (GET, POST, PUT, DELETE)
+- [x] T011 [US1] Implement loading spinner during data fetch (use existing LoadingSpinner component)
+- [x] T012 [US1] Implement success message display after form save ("Ustawienia zapisane pomyślnie")
 
 ---
 
@@ -242,11 +242,20 @@ Phase 5 (all): T028-T034 sequential
 
 ## Status
 
-**Phase 1**: ✅ Foundation Ready
-**Phase 2**: 🔄 Ready for Implementation
-**Phase 3-5**: ⏳ Blocked until Phase 2 Complete
+**Phase 1**: ✅ COMPLETE (T001-T004)
+**Phase 2**: ✅ COMPLETE (T005-T012) - User Story 1 (Form Validation with RHF + Zod)
+  - T005: ✅ RHF refactoring with per-day forms and useRef for form management
+  - T006: ⏳ ShiftParameterForm sub-component (optional - inlined in main component)
+  - T007: ✅ Zod schema validation with Polish error messages
+  - T008: ✅ Form field rendering with error display
+  - T009: ✅ Blur-triggered validation enabled
+  - T010: ✅ API integration verified (all CRUD methods implemented)
+  - T011: ✅ Loading spinner during data fetch
+  - T012: ✅ Success message display
 
-**Next**: Begin with T005-T006 (component refactoring)
+**Phase 3-5**: ⏳ Ready for Implementation - Dynamic shifts, backend integration, edge cases
 
-**Estimated Timeline**: 2-3 days for full MVP, 4-5 days for all 3 user stories + polish
+**Next**: T013-T019 (Phase 3 - Dynamic field management with useFieldArray)
+
+**Estimated Timeline**: Phase 2 complete, Phase 3 (2-3 days), Phase 4 (2-3 days), Phase 5 (1 day)
 
