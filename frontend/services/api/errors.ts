@@ -76,7 +76,7 @@ export async function handleErrorResponse(response: Response): Promise<never> {
     case 403:
       throw new ApiError(response.status, 'Forbidden: Access denied');
     case 404:
-      throw new ApiError(response.status, 'Not found');
+      throw new ApiError(response.status, 'Zmiana nie istnieje');
     case 409:
       throw new ApiError(response.status, 'Conflict: Resource already exists');
     case 422:
@@ -122,7 +122,7 @@ export function getErrorMessage(error: unknown): string {
     return error.message;
   }
   if (error instanceof NetworkError) {
-    return 'Network connection failed. Please check your internet connection.';
+    return 'Nie możemy nawiązać połączenia';
   }
   if (error instanceof Error) {
     return error.message;
