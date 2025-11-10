@@ -1,22 +1,61 @@
 param(
     [switch]$NoFrontend,
     [switch]$Production,
-    [switch]$BuildOnly
+    [switch]$BuildOnly,
+    [switch]$BackendOnly,
+    [switch]$FrontendOnly
 )
 
 $repoRoot = Split-Path -Parent $PSCommandPath
-$backendPath = Join-Path $repoRoot "backend"
-$frontendPath = Join-Path $repoRoot "frontend"
-$venvActivate = Join-Path $backendPath "venv\Scripts\Activate.ps1"
-$releaseDir = Join-Path $repoRoot "release"
+$backendScript = Join-Path $repoRoot "start_backend.ps1"
+$frontendScript = Join-Path $repoRoot "start_frontend.ps1"
 
-if (!(Test-Path $venvActivate)) {
-    Write-Error "Nie znaleziono środowiska wirtualnego w backend\venv. Uruchom Phase 1, aby je utworzyć."
+# Check if scripts exist
+if (!(Test-Path $backendScript)) {
+    Write-Error "Nie znaleziono skryptu start_backend.ps1"
     exit 1
 }
 
-# Production mode: Build and bundle application
-if ($Production -or $BuildOnly) {
+if (!(Test-Path $frontendScript)) {
+    Write-Error "Nie znaleziono skryptu start_frontend.ps1"
+    exit 1
+}
+
+Write-Host "=== WorkSchedule PL - Launcher ===" -ForegroundColor Green
+Write-Host ""
+
+Write-Host "=== WorkSchedule PL - Launcher ===" -ForegroundColor Green
+Write-Host ""
+
+# Handle special modes
+if ($BackendOnly) {
+    Write-Host "Uruchamiam tylko backend..." -ForegroundColor Cyan
+    if ($Production) {
+        & $backendScript -Production
+    } else {
+        & $backendScript
+    }
+    exit $LASTEXITCODE
+}
+
+if ($FrontendOnly) {
+    Write-Host "Uruchamiam tylko frontend..." -ForegroundColor Cyan
+    if ($Production) {
+        & $frontendScript -Production
+    } elseif ($BuildOnly) {
+        & $frontendScript -Build
+    } else {
+        & $frontendScript
+    }
+    exit $LASTEXITCODE
+}
+
+# Build-only mode for release package
+if ($BuildOnly) {
+    $releaseDir = Join-Path $repoRoot "release"
+    $backendPath = Join-Path $repoRoot "backend"
+    $frontendPath = Join-Path $repoRoot "frontend"
+    
     Write-Host "=== Tryb produkcyjny: Budowanie aplikacji ===" -ForegroundColor Green
     
     # Create release directory
@@ -163,62 +202,44 @@ Dla instrukcji instalacji offline, zobacz `docs/INSTRUKCJA.md`.
     
     Write-Host "`n=== Budowanie zakończone ===" -ForegroundColor Green
     Write-Host "Paczka release znajduje się w: $releaseDir" -ForegroundColor Cyan
-    
-    if ($BuildOnly) {
-        Write-Host "Tryb BuildOnly - zakończono bez uruchamiania aplikacji." -ForegroundColor Yellow
-        exit 0
-    }
-    
-    Write-Host "`nUruchamianie aplikacji w trybie produkcyjnym..." -ForegroundColor Green
-    
-    # Production start after build
-    Write-Host "Uruchamiam backend (produkcja)..."
-    Start-Process powershell -ArgumentList @(
-        "-NoExit",
-        "-Command",
-        "Set-Location '$backendPath'; . '$venvActivate'; `$env:FLASK_ENV='production'; python -m backend.app"
-    )
-    
-    if (-not $NoFrontend) {
-        Write-Host "Uruchamiam frontend (produkcja)..."
-        Start-Process powershell -ArgumentList @(
-            "-NoExit",
-            "-Command",
-            "Set-Location '$frontendPath'; npm start"
-        )
-    }
-    
-    Write-Host "`nAplikacja uruchomiona w trybie produkcyjnym!" -ForegroundColor Green
-    Write-Host "Backend: http://localhost:5000" -ForegroundColor Cyan
-    if (-not $NoFrontend) {
-        Write-Host "Frontend: http://localhost:3000" -ForegroundColor Cyan
-    }
-    
     exit 0
 }
 
-# Development mode (original behavior)
-Write-Host "=== Tryb deweloperski ===" -ForegroundColor Green
-Write-Host "Uruchamiam backend (rozwój)..."
-Start-Process powershell -ArgumentList @(
-    "-NoExit",
-    "-Command",
-    "Set-Location '$backendPath'; . '$venvActivate'; python -m backend.app"
-)
-
-if (-not $NoFrontend) {
-    Write-Host "Uruchamiam frontend (rozwój)..."
-    Start-Process powershell -ArgumentList @(
-        "-NoExit",
-        "-Command",
-        "Set-Location '$frontendPath'; npm run dev"
-    )
+# Standard mode: Start both backend and frontend in separate windows
+if ($Production) {
+    Write-Host "Uruchamiam w trybie produkcyjnym..." -ForegroundColor Yellow
+    Write-Host ""
 } else {
-    Write-Host "Pominięto uruchomienie frontendu (parametr -NoFrontend)."
+    Write-Host "Uruchamiam w trybie deweloperskim..." -ForegroundColor Yellow
+    Write-Host ""
 }
 
-Write-Host "`nAplikacja uruchomiona!" -ForegroundColor Green
+# Start backend in new window
+Write-Host "Uruchamiam backend..." -ForegroundColor Cyan
+if ($Production) {
+    Start-Process powershell -ArgumentList "-NoExit", "-File", $backendScript, "-Production"
+} else {
+    Start-Process powershell -ArgumentList "-NoExit", "-File", $backendScript
+}
+
+# Start frontend in new window (unless NoFrontend flag)
+if (-not $NoFrontend) {
+    Write-Host "Uruchamiam frontend..." -ForegroundColor Cyan
+    if ($Production) {
+        Start-Process powershell -ArgumentList "-NoExit", "-File", $frontendScript, "-Production"
+    } else {
+        Start-Process powershell -ArgumentList "-NoExit", "-File", $frontendScript
+    }
+} else {
+    Write-Host "Pominięto uruchomienie frontendu (parametr -NoFrontend)." -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "=== Aplikacja uruchomiona ===" -ForegroundColor Green
 Write-Host "Backend: http://localhost:5000" -ForegroundColor Cyan
 if (-not $NoFrontend) {
     Write-Host "Frontend: http://localhost:3000" -ForegroundColor Cyan
 }
+Write-Host ""
+Write-Host "Zamknij okna terminali aby zatrzymać serwery." -ForegroundColor Yellow
+
