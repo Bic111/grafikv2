@@ -47,7 +47,7 @@ All 3 stories are **independent** and can be implemented in parallel, but follow
 ### Implementation Tasks
 
 - [x] T005 [US1] Refactor `frontend/components/employees/ParametryZmianTab.tsx` main component to use React Hook Form `useForm` hook for each day (one form per day)
-- [ ] T006 [US1] Create `frontend/components/employees/forms/ShiftParameterForm.tsx` sub-component using Controller for individual shift row (time inputs, staff count)
+- [x] T006 [US1] Create `frontend/components/employees/forms/ShiftParameterForm.tsx` sub-component using Controller for individual shift row (time inputs, staff count) - Logika Controller zintegrowana inline w głównym komponencie
 - [x] T007 [P] [US1] Implement Zod schema validation with Polish error messages in component's form initialization
 - [x] T008 [US1] Implement form field rendering with error display next to each field (godzina_od, godzina_do, liczba_obsad)
 - [x] T009 [US1] Implement blur-triggered validation (`onBlur={() => form.trigger()}`) for real-time error feedback

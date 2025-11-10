@@ -1,5 +1,5 @@
 import React from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/components/common';
 import { shiftParameterInputSchema, dayFormSchema } from '@/lib/validation/schemas';
 import type { DayFormData } from '@/types/shift-parameter';
+import { DayFormSection } from './DayFormSection';
 
 type ShiftCategory = 'default' | 'lead';
 
@@ -225,7 +226,8 @@ export function ParametryZmianTab(): JSX.Element {
   };
 
   /**
-   * Handle shift removal (with confirmation for saved shifts)
+   * T016/T017: Handle shift removal with confirmation for saved shifts
+   * Immediate removal for unsaved shifts (no ID)
    */
   const handleRemoveShift = (day: number, category: ShiftCategory, index: number, shiftId?: string) => {
     const form = formsRef.current[day];
@@ -233,25 +235,25 @@ export function ParametryZmianTab(): JSX.Element {
 
     const fieldArrayKey = category === 'default' ? 'defaultShifts' : 'leadShifts';
 
-    // Check if we can remove (must have at least 3 shifts, one per type)
+    // T018: Check if we can remove (must have at least 3 shifts, one per type)
     const currentShifts = form.getValues(fieldArrayKey);
     if (currentShifts.length <= SHIFT_TYPES.length) {
       return;
     }
 
     if (shiftId) {
-      // Confirm deletion for shifts with IDs
+      // T016: Confirm deletion for shifts with IDs (already saved to database)
       setConfirmDelete({ day, shiftId });
       return;
     }
 
-    // Remove unsaved shift immediately by setting the array without this index
+    // T017: Remove unsaved shift immediately without confirmation
     const updated = currentShifts.filter((_, i) => i !== index);
     form.setValue(fieldArrayKey, updated);
   };
 
   /**
-   * Handle adding a new shift to a category
+   * T015: Handle adding a new shift to a category
    */
   const handleAddShift = (day: number, category: ShiftCategory) => {
     const form = formsRef.current[day];
@@ -424,232 +426,21 @@ export function ParametryZmianTab(): JSX.Element {
             return null;
           }
 
-          const renderSection = (
-            category: ShiftCategory,
-            heading: string,
-            description: string,
-          ) => {
-            const shifts = form.watch(category === 'default' ? 'defaultShifts' : 'leadShifts');
-
-            return (
-              <div className="space-y-4">
-                <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-800">{heading}</h3>
-                    <p className="text-xs text-gray-500">{description}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleAddShift(dayIndex, category)}
-                    className="mt-2 inline-flex items-center justify-center rounded-md border border-dashed border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 hover:border-blue-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 md:mt-0"
-                  >
-                    + dodaj kolejną zmianę
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {shifts.map((shift, index) => {
-                    const fieldName = (category === 'default' ? 'defaultShifts' : 'leadShifts') as const;
-                    const errors = form.formState.errors[fieldName]?.[index];
-                    const canRemove = shifts.length > SHIFT_TYPES.length;
-
-                    return (
-                      <div key={shift.localId} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                        <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900">
-                              {shift.typ_zmiany}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {category === 'lead' ? 'Prowadzący zmianę' : 'Domyślne ustawienie zmiany'}
-                            </p>
-                          </div>
-                          {canRemove && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleRemoveShift(
-                                  dayIndex,
-                                  category,
-                                  index,
-                                  shift.id,
-                                )
-                              }
-                              disabled={dayState.isSaving}
-                              className="self-start rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 md:self-auto"
-                            >
-                              Usuń
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="mt-4 grid gap-4 md:grid-cols-4">
-                          <div className="space-y-1">
-                            <label className="block text-xs font-medium text-gray-600">
-                              Typ zmiany
-                            </label>
-                            <Controller
-                              control={form.control}
-                              name={`${fieldName}.${index}.typ_zmiany`}
-                              render={({ field }) => (
-                                <select
-                                  {...field}
-                                  disabled={dayState.isSaving}
-                                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                                >
-                                  {SHIFT_TYPES.map((type) => (
-                                    <option key={type} value={type}>
-                                      {type}
-                                    </option>
-                                  ))}
-                                </select>
-                              )}
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="block text-xs font-medium text-gray-600">
-                              Godzina od
-                            </label>
-                            <Controller
-                              control={form.control}
-                              name={`${fieldName}.${index}.godzina_od`}
-                              render={({ field, fieldState: { error } }) => (
-                                <>
-                                  <input
-                                    {...field}
-                                    type="time"
-                                    disabled={dayState.isSaving}
-                                    className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 ${
-                                      error ? 'border-red-500' : 'border-gray-300'
-                                    }`}
-                                    onBlur={() => form.trigger(`${fieldName}.${index}`)}
-                                  />
-                                  {error && (
-                                    <p className="text-xs text-red-600">{error.message}</p>
-                                  )}
-                                </>
-                              )}
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="block text-xs font-medium text-gray-600">
-                              Godzina do
-                            </label>
-                            <Controller
-                              control={form.control}
-                              name={`${fieldName}.${index}.godzina_do`}
-                              render={({ field, fieldState: { error } }) => (
-                                <>
-                                  <input
-                                    {...field}
-                                    type="time"
-                                    disabled={dayState.isSaving}
-                                    className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 ${
-                                      error ? 'border-red-500' : 'border-gray-300'
-                                    }`}
-                                    onBlur={() => form.trigger(`${fieldName}.${index}`)}
-                                  />
-                                  {error && (
-                                    <p className="text-xs text-red-600">{error.message}</p>
-                                  )}
-                                </>
-                              )}
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="block text-xs font-medium text-gray-600">
-                              Liczba pracowników
-                            </label>
-                            <Controller
-                              control={form.control}
-                              name={`${fieldName}.${index}.liczba_obsad`}
-                              render={({ field, fieldState: { error } }) => (
-                                <>
-                                  <input
-                                    {...field}
-                                    type="number"
-                                    min="0"
-                                    disabled={dayState.isSaving}
-                                    onChange={(e) => field.onChange(Number(e.target.value))}
-                                    className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 ${
-                                      error ? 'border-red-500' : 'border-gray-300'
-                                    }`}
-                                    onBlur={() => form.trigger(`${fieldName}.${index}`)}
-                                  />
-                                  {error && (
-                                    <p className="text-xs text-red-600">{error.message}</p>
-                                  )}
-                                </>
-                              )}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          };
-
           return (
-            <section
+            <DayFormSection
               key={dayName}
-              className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
-            >
-              <button
-                type="button"
-                onClick={() => handleToggleDay(dayIndex)}
-                className="flex w-full items-center justify-between bg-gray-50 px-5 py-4 text-left"
-              >
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900">{dayName}</h3>
-                  <p className="text-xs text-gray-500">
-                    Skonfiguruj zmianę poranną, środkową i popołudniową oraz prowadzących.
-                  </p>
-                </div>
-                <span className="text-sm text-gray-500">
-                  {dayState.isExpanded ? 'Zwiń' : 'Rozwiń'}
-                </span>
-              </button>
-
-              {dayState.isExpanded && (
-                <div className="space-y-6 border-t border-gray-200 px-5 py-6">
-                  {renderSection(
-                    'default',
-                    'Domyślne ustawienia zmian',
-                    'Standardowa obsada zmian: Rano, Środek, Popołudnie.',
-                  )}
-
-                  {renderSection(
-                    'lead',
-                    'Prowadzący zmianę',
-                    'Osoby prowadzące każdą zmianę (min. 1 osoba na zmianę).',
-                  )}
-
-                  {dayState.error && <ErrorMessage message={dayState.error} />}
-                  {dayState.success && (
-                    <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
-                      {dayState.success}
-                    </div>
-                  )}
-
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => handleSaveDay(dayIndex)}
-                      disabled={dayState.isSaving}
-                      className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-400"
-                    >
-                      {dayState.isSaving ? 'Zapisywanie...' : 'Zapisz ustawienia dnia'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </section>
+              dayIndex={dayIndex}
+              dayName={dayName}
+              form={form}
+              isSaving={dayState.isSaving}
+              error={dayState.error}
+              success={dayState.success}
+              isExpanded={dayState.isExpanded}
+              onToggleDay={handleToggleDay}
+              onAddShift={handleAddShift}
+              onRemoveShift={handleRemoveShift}
+              onSaveDay={handleSaveDay}
+            />
           );
         })}
       </div>
