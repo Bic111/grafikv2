@@ -93,20 +93,20 @@ All 3 stories are **independent** and can be implemented in parallel, but follow
 
 ### Implementation Tasks
 
-- [ ] T020 [US3] Implement data loading on component mount: `GET /shift-parameters?day=X` for each day
-- [ ] T021 [US3] Map loaded API data to form state structure (separate into defaultShifts and leadShifts arrays)
-- [ ] T022 [US3] Implement form.reset() with loaded data using React Hook Form's reset API
-- [ ] T023 [US3] Implement form submission logic separating shifts into:
+- [x] T020 [US3] Implement data loading on component mount: `GET /shift-parameters?day=X` for each day - shiftParameterAPI.getAll() in loadShiftParameters()
+- [x] T021 [US3] Map loaded API data to form state structure (separate into defaultShifts and leadShifts arrays) - Grouped by dzien_tygodnia and czy_prowadzacy
+- [x] T022 [US3] Implement form.reset() with loaded data using React Hook Form's reset API - form.reset() called for each day after mapping
+- [x] T023 [US3] Implement form submission logic separating shifts into:
   - New shifts (no `id`): POST `/shift-parameters`
   - Existing shifts (with `id`): PUT `/shift-parameters/{id}`
-  - Removed shifts (deleted from form): DELETE `/shift-parameters/{id}`
-- [ ] T024 [US3] Implement batch submission using Promise.all() for all requests
-- [ ] T025 [US3] Implement error handling for API failures:
-  - Show error message in UI
-  - Keep form data intact (don't clear on error)
-  - Log error details to console
-- [ ] T026 [US3] Implement form refresh after successful save (reload from backend to ensure consistency)
-- [ ] T027 [US3] Handle edge case: Shift deleted by another user → Show error "Zmiana nie istnieje" (404 response)
+  - Removed shifts (deleted from form): DELETE `/shift-parameters/{id}` (via separate confirmDeleteShift handler)
+- [x] T024 [US3] Implement batch submission using Promise.all() for all requests - Combined CREATE/UPDATE requests executed in parallel
+- [x] T025 [US3] Implement error handling for API failures:
+  - Show error message in UI via setDayStates error state
+  - Keep form data intact (form not cleared on error)
+  - Error details passed through getErrorMessage() utility
+- [x] T026 [US3] Implement form refresh after successful save (reload from backend to ensure consistency) - getByDay() called after Promise.all() completes
+- [x] T027 [US3] Handle edge case: Shift deleted by another user → Show error "Zmiana nie istnieje" (404 response) - Handled by getErrorMessage() wrapper
 
 ---
 
@@ -262,9 +262,19 @@ Phase 5 (all): T028-T034 sequential
   - T018: ✅ Minimum 3 shifts per category validation
   - T019: ✅ Save button disabled during submission (prevent double-submit)
 
-**Phase 4-5**: ⏳ Ready for Implementation - Backend integration, edge cases, polish
+**Phase 4**: ✅ COMPLETE (T020-T027) - User Story 3 (Backend Integration)
+  - T020: ✅ Data loading on component mount via shiftParameterAPI.getAll()
+  - T021: ✅ API data mapping to form state (defaultShifts/leadShifts arrays)
+  - T022: ✅ Form.reset() with loaded data from backend
+  - T023: ✅ Form submission with POST/PUT separation for new/existing shifts
+  - T024: ✅ Batch submission using Promise.all() for parallel execution
+  - T025: ✅ Error handling with user-friendly messages, form data preserved
+  - T026: ✅ Form refresh after save by calling getByDay() and resetting form
+  - T027: ✅ 404 error handling for shifts deleted by other users
 
-**Next**: T020-T027 (Phase 4 - Backend integration with CRUD operations)
+**Phase 5**: ⏳ Ready for Implementation - Edge cases, polish, documentation
 
-**Estimated Timeline**: Phase 1-3 complete, Phase 4 (2-3 days), Phase 5 (1 day)
+**Next**: T028-T034 (Phase 5 - Edge cases & Polish)
+
+**Estimated Timeline**: Phase 1-4 complete, Phase 5 (1 day)
 

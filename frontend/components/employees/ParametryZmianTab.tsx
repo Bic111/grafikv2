@@ -145,17 +145,24 @@ export function ParametryZmianTab(): JSX.Element {
     shiftId: string;
   } | null>(null);
 
+  /**
+   * T020: Load shift parameters on component mount using GET /shift-parameters
+   * Fetches all shift parameters for all days from backend
+   */
   const loadShiftParameters = React.useCallback(async () => {
     setIsLoading(true);
     setGlobalError(null);
     try {
+      // T020: Get all shift parameters from backend
       const data = await shiftParameterAPI.getAll();
 
-      // Group by day and category
+      // T021: Map loaded API data to form state structure
+      // Separate data into defaultShifts and leadShifts arrays grouped by day
       const byDay = new Map<number, { default: typeof data; lead: typeof data }>();
 
       data.forEach((item) => {
         const dayData = byDay.get(item.dzien_tygodnia) ?? { default: [], lead: [] };
+        // T021: Separate into defaultShifts (czy_prowadzacy=false) and leadShifts (czy_prowadzacy=true)
         if (item.czy_prowadzacy) {
           dayData.lead.push(item);
         } else {
@@ -164,6 +171,7 @@ export function ParametryZmianTab(): JSX.Element {
         byDay.set(item.dzien_tygodnia, dayData);
       });
 
+      // T022: Implement form.reset() with loaded data using React Hook Form's reset API
       // Update each day's form with loaded data
       DAY_NAMES.forEach((_, dayIndex) => {
         const dayData = byDay.get(dayIndex) ?? { default: [], lead: [] };
@@ -180,7 +188,7 @@ export function ParametryZmianTab(): JSX.Element {
           true,
         );
 
-        // Reset form with new data
+        // T022: Reset form with new data from backend
         if (form) {
           form.reset({
             defaultShifts,
@@ -202,6 +210,7 @@ export function ParametryZmianTab(): JSX.Element {
         return nextStates;
       });
     } catch (error) {
+      // T025: Error handling for API failures during data loading
       setGlobalError(getErrorMessage(error));
     } finally {
       setIsLoading(false);
@@ -291,8 +300,8 @@ export function ParametryZmianTab(): JSX.Element {
   };
 
   /**
-   * Save a day's shift configuration
-   * Validates with Zod, separates into CREATE/UPDATE/DELETE operations, and persists to backend
+   * T023-T027: Save a day's shift configuration
+   * Validates with Zod, separates into CREATE/UPDATE operations, persists to backend, and handles errors
    */
   const handleSaveDay = async (day: number) => {
     const form = formsRef.current[day];
@@ -327,11 +336,11 @@ export function ParametryZmianTab(): JSX.Element {
       const formData = form.getValues();
       const combined = [...formData.defaultShifts, ...formData.leadShifts];
 
-      // Separate into new (no id), existing (with id), and deleted
+      // T023: Separate into new shifts (no id) and existing shifts (with id)
       const createPayload = combined.filter((entry) => !entry.id);
       const updatePayload = combined.filter((entry) => entry.id);
 
-      // Execute all requests in parallel
+      // T024: Execute all requests in parallel using Promise.all()
       const requests = [
         ...createPayload.map((entry) =>
           shiftParameterAPI.create({
@@ -355,9 +364,10 @@ export function ParametryZmianTab(): JSX.Element {
         ),
       ];
 
+      // T024: Wait for all requests to complete
       await Promise.all(requests);
 
-      // Reload data from backend to ensure consistency
+      // T026: Reload data from backend to ensure consistency after save
       const refreshed = await shiftParameterAPI.getByDay(day);
       const defaultShifts = ensureBaseShifts(
         refreshed
@@ -374,8 +384,8 @@ export function ParametryZmianTab(): JSX.Element {
         true,
       );
 
-      // Reset form with refreshed data
-      dayState.form.reset({ defaultShifts, leadShifts });
+      // T026: Reset form with refreshed data from backend
+      form.reset({ defaultShifts, leadShifts });
 
       setDayStates((prev) => ({
         ...prev,
@@ -387,12 +397,15 @@ export function ParametryZmianTab(): JSX.Element {
         },
       }));
     } catch (error) {
+      // T025/T027: Error handling - keep form data intact and display error message
+      // T027: Handle 404 errors (shift deleted by another user) and other API failures
+      const errorMessage = getErrorMessage(error);
       setDayStates((prev) => ({
         ...prev,
         [day]: {
           ...prev[day],
           isSaving: false,
-          error: getErrorMessage(error),
+          error: errorMessage,
           success: null,
         },
       }));
