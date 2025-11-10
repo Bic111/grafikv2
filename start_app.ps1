@@ -170,16 +170,13 @@ Dla instrukcji instalacji offline, zobacz `docs/INSTRUKCJA.md`.
     }
     
     Write-Host "`nUruchamianie aplikacji w trybie produkcyjnym..." -ForegroundColor Green
-    # Continue to production start...
-}
-
-# Development or production start
-if ($Production) {
+    
+    # Production start after build
     Write-Host "Uruchamiam backend (produkcja)..."
     Start-Process powershell -ArgumentList @(
         "-NoExit",
         "-Command",
-        "Set-Location '$backendPath'; . '$venvActivate'; $env:FLASK_ENV='production'; python -m backend.app"
+        "Set-Location '$backendPath'; . '$venvActivate'; `$env:FLASK_ENV='production'; python -m backend.app"
     )
     
     if (-not $NoFrontend) {
@@ -190,25 +187,34 @@ if ($Production) {
             "Set-Location '$frontendPath'; npm start"
         )
     }
-} else {
-    # Development mode (original behavior)
-    Write-Host "Uruchamiam backend (rozwój)..."
+    
+    Write-Host "`nAplikacja uruchomiona w trybie produkcyjnym!" -ForegroundColor Green
+    Write-Host "Backend: http://localhost:5000" -ForegroundColor Cyan
+    if (-not $NoFrontend) {
+        Write-Host "Frontend: http://localhost:3000" -ForegroundColor Cyan
+    }
+    
+    exit 0
+}
+
+# Development mode (original behavior)
+Write-Host "=== Tryb deweloperski ===" -ForegroundColor Green
+Write-Host "Uruchamiam backend (rozwój)..."
+Start-Process powershell -ArgumentList @(
+    "-NoExit",
+    "-Command",
+    "Set-Location '$backendPath'; . '$venvActivate'; python -m backend.app"
+)
+
+if (-not $NoFrontend) {
+    Write-Host "Uruchamiam frontend (rozwój)..."
     Start-Process powershell -ArgumentList @(
         "-NoExit",
         "-Command",
-        "Set-Location '$backendPath'; . '$venvActivate'; python -m backend.app"
+        "Set-Location '$frontendPath'; npm run dev"
     )
-
-    if (-not $NoFrontend) {
-        Write-Host "Uruchamiam frontend (rozwój)..."
-        Start-Process powershell -ArgumentList @(
-            "-NoExit",
-            "-Command",
-            "Set-Location '$frontendPath'; npm run dev"
-        )
-    } else {
-        Write-Host "Pominięto uruchomienie frontendu (parametr -NoFrontend)."
-    }
+} else {
+    Write-Host "Pominięto uruchomienie frontendu (parametr -NoFrontend)."
 }
 
 Write-Host "`nAplikacja uruchomiona!" -ForegroundColor Green
