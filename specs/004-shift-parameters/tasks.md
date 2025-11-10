@@ -24,12 +24,12 @@ All 3 stories are **independent** and can be implemented in parallel, but follow
 
 ---
 
-## Phase 1: Setup & Foundation
+## Phase 1: Setup & Foundation ✅ COMPLETE
 
-- [ ] T001 Create `frontend/lib/validation/shiftParameterSchemas.ts` with Zod schema for time validation (HH:MM format, range 00:00-23:59)
-- [ ] T002 Update `frontend/lib/validation/schemas.ts` to export `shiftParameterInputSchema` with all validation rules (cross-field validation for godzina_od < godzina_do)
-- [ ] T003 Verify React Hook Form and Zod are installed in `package.json` (if missing, add `react-hook-form` and `@hookform/resolvers`)
-- [ ] T004 Create type definitions in `frontend/types/shift-parameter.ts` for `DayFormData`, `ShiftFormValue`, and form-related types
+- [x] T001 Create `frontend/lib/validation/shiftParameterSchemas.ts` with Zod schema for time validation (HH:MM format, range 00:00-23:59)
+- [x] T002 Update `frontend/lib/validation/schemas.ts` to export `shiftParameterInputSchema` with all validation rules (cross-field validation for godzina_od < godzina_do)
+- [x] T003 Verify React Hook Form and Zod are installed in `package.json` (if missing, add `react-hook-form` and `@hookform/resolvers`)
+- [x] T004 Create type definitions in `frontend/types/shift-parameter.ts` for `DayFormData`, `ShiftFormValue`, and form-related types
 
 ---
 
