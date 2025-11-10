@@ -1,14 +1,12 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.1.0
-- List of modified principles: 
-  - "Test-Driven Development (TDD)" → "Walidacja i zgodność z prawem pracy"
-  - "Continuous Integration and Continuous Delivery (CI/CD)" → "Optymalizacja oparta na danych"
-- Added sections: None
-- Removed sections: None
-- Templates requiring updates:
-- .specify/templates/plan-template.md: ⚠ pending
-- Follow-up TODOs: None
+- Version change: 1.1.0 (no version bump - templates synchronized, constitution unchanged)
+- Templates synchronized:
+  - .specify/templates/plan-template.md (Constitution Check section): ✅ updated
+  - .specify/templates/spec-template.md: ✅ no changes needed
+  - .specify/templates/tasks-template.md: ✅ no changes needed
+- All 5 core principles aligned across templates and constitution
+- Last synchronized: 2025-11-10
 -->
 # WorkSchedule PL Constitution
 

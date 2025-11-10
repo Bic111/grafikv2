@@ -11,6 +11,8 @@ export interface Holiday {
   nazwa: string;
   /** Description or details about the holiday */
   opis?: string;
+  /** Whether the store is closed on this holiday */
+  store_closed: boolean;
   /** Timestamp when the record was created */
   utworzono?: string;
   /** Timestamp when the record was last updated */
@@ -35,4 +37,13 @@ export interface HolidayFilterParams {
   rok?: number;
   /** Filter by month */
   miesiac?: number;
+}
+
+/**
+ * Type for the holiday form state
+ */
+export interface HolidayFormState {
+  date: string;
+  name: string;
+  store_closed: boolean;
 }

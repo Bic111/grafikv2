@@ -1,0 +1,10 @@
+PS C:\Users\kryst> cd D:\graf\Grafikv2\backend\
+.\venv\Scripts\Activate.ps1
+cd ..
+python -m backend.app
+
+"C:\Program Files\PowerShell\7\pwsh.exe"
+
+
+PS C:\Users\kryst> cd D:\graf\Grafikv2\frontend\
+npm run dev

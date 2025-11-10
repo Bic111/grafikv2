@@ -47,7 +47,7 @@ class HolidayAPI extends ApiClient {
    * Delete a holiday
    */
   async delete(id: string): Promise<void> {
-    return this.delete<void>(`/api/holidays/${id}`);
+    return super.delete<void>(`/api/holidays/${id}`);
   }
 
   /**

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc --noEmit)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(..specifyscriptspowershellcheck-prerequisites.ps1 -Json)",
+      "Bash(powershell -Command \".\\.specify\\scripts\\powershell\\check-prerequisites.ps1 -Json\")",
+      "Bash(powershell -Command \".\\.specify\\scripts\\powershell\\check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks\")",
+      "Bash(if [ -d \"D:\\graf\\Grafikv2\\specs\\003-employees-tabs\\checklists\" ])",
+      "Bash(then ls \"D:\\graf\\Grafikv2\\specs\\003-employees-tabs\\checklists\")",
+      "Bash(else echo \"NO_CHECKLISTS\")",
+      "Bash(fi)",
+      "Bash(git rev-parse:*)",
+      "Bash(test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

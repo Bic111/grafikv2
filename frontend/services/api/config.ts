@@ -3,13 +3,18 @@
  */
 
 /**
- * Base URL for API requests
- * Can be overridden via environment variables
+ * Determine runtime environment (browser vs. server)
  */
-export const API_BASE_URL =
-  typeof window !== 'undefined'
-    ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
-    : process.env.API_URL || 'http://localhost:5000';
+const isBrowser = typeof window !== 'undefined';
+
+/**
+ * Base URL for API requests
+ * - In przeglądarka: domyślnie ten sam origin (np. Next.js proxy lub API routes)
+ * - W środowisku serwerowym/testowym: można skonfigurować przez zmienne środowiskowe
+ */
+export const API_BASE_URL = isBrowser
+  ? process.env.NEXT_PUBLIC_API_URL ?? ''
+  : process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
 
 /**
  * Common HTTP headers for API requests

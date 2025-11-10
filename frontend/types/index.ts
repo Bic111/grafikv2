@@ -31,6 +31,7 @@ export type {
   CreateHolidayInput,
   UpdateHolidayInput,
   HolidayFilterParams,
+  HolidayFormState,
 } from './holiday';
 
 export type {
@@ -48,3 +49,11 @@ export type {
 } from './rule';
 
 export { RULE_TYPES } from './rule';
+
+export type {
+  DayType,
+  StaffingTemplate,
+  StaffingTemplateFormState,
+  CreateStaffingTemplateInput,
+  UpdateStaffingTemplateInput,
+} from './staffing-template';

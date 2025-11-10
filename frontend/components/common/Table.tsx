@@ -5,6 +5,13 @@
 
 import React from 'react';
 
+export type SortDirection = 'asc' | 'desc';
+
+export interface TableSortState {
+  columnKey: string;
+  direction: SortDirection;
+}
+
 export interface TableColumn<T> {
   /** Unique column identifier */
   key: string;
@@ -36,6 +43,10 @@ export interface TableProps<T> {
   emptyMessage?: string;
   /** Optional className for table styling */
   className?: string;
+  /** Current sort state */
+  sortState?: TableSortState;
+  /** Sort handler */
+  onSort?: (columnKey: string, direction: SortDirection) => void;
 }
 
 /**
@@ -49,6 +60,8 @@ export function Table<T>({
   isLoading = false,
   emptyMessage = 'Brak danych',
   className = '',
+  sortState,
+  onSort,
 }: TableProps<T>): JSX.Element {
   if (isLoading) {
     return (
@@ -71,17 +84,57 @@ export function Table<T>({
       <table className="w-full border-collapse">
         <thead>
           <tr className="border-b-2 border-gray-200 bg-gray-50">
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                className={`px-4 py-3 text-left text-sm font-semibold text-gray-700 ${column.className || ''}`}
-              >
-                {column.label}
-                {column.sortable && (
-                  <span className="ml-2 text-gray-400">⇅</span>
-                )}
-              </th>
-            ))}
+            {columns.map((column) => {
+              const isSorted = sortState?.columnKey === column.key;
+              const sortIndicator = !column.sortable
+                ? null
+                : isSorted
+                  ? sortState?.direction === 'asc'
+                    ? '↑'
+                    : '↓'
+                  : '⇅';
+
+              const handleHeaderClick = () => {
+                if (!onSort || !column.sortable) return;
+                const nextDirection: SortDirection = isSorted && sortState
+                  ? sortState.direction === 'asc'
+                    ? 'desc'
+                    : 'asc'
+                  : 'asc';
+                onSort(column.key, nextDirection);
+              };
+
+              return (
+                <th
+                  key={column.key}
+                  className={`px-4 py-3 text-left text-sm font-semibold text-gray-700 ${column.className || ''}`}
+                >
+                  {column.sortable && onSort ? (
+                    <button
+                      type="button"
+                      onClick={handleHeaderClick}
+                      className={`inline-flex items-center gap-1 ${isSorted ? 'text-blue-600' : ''}`}
+                    >
+                      <span>{column.label}</span>
+                      {sortIndicator && (
+                        <span aria-hidden="true" className="text-xs text-gray-400">
+                          {sortIndicator}
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    <span className="inline-flex items-center gap-1">
+                      {column.label}
+                      {sortIndicator && (
+                        <span aria-hidden="true" className="text-xs text-gray-300">
+                          {sortIndicator}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </th>
+              );
+            })}
             {actions && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
                 {actions.label || 'Akcje'}

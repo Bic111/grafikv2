@@ -26,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="pl">
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} flex bg-gray-900 text-white antialiased`}
       >
         <Sidebar />

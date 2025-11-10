@@ -47,15 +47,15 @@ class ShiftParameterAPI extends ApiClient {
    * Delete a shift parameter
    */
   async delete(id: string): Promise<void> {
-    return this.delete<void>(`/api/shift-parameters/${id}`);
+    return super.delete<void>(`/api/shift-parameters/${id}`);
   }
 
   /**
    * Get shift parameters for a specific day of week
    */
-  async getByDay(dzień_tygodnia: number): Promise<ShiftParameter[]> {
+  async getByDay(dzien_tygodnia: number): Promise<ShiftParameter[]> {
     return this.get<ShiftParameter[]>(
-      `/api/shift-parameters?day=${dzień_tygodnia}`
+      `/api/shift-parameters?day=${dzien_tygodnia}`
     );
   }
 
@@ -76,7 +76,7 @@ class ShiftParameterAPI extends ApiClient {
     const grouped: Record<number, ShiftParameter[]> = {};
 
     for (let day = 0; day < 7; day++) {
-      grouped[day] = params.filter((p) => p.dzień_tygodnia === day);
+      grouped[day] = params.filter((p) => p.dzien_tygodnia === day);
     }
 
     return grouped;

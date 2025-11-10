@@ -12,4 +12,9 @@ export { ConfirmDialog } from './ConfirmDialog';
 export type { ConfirmDialogProps } from './ConfirmDialog';
 
 export { Table, TableSkeleton } from './Table';
-export type { TableColumn, TableProps } from './Table';
+export type {
+  TableColumn,
+  TableProps,
+  TableSortState,
+  SortDirection,
+} from './Table';
