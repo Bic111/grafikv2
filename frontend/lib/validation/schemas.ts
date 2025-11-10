@@ -55,17 +55,43 @@ export type AbsenceFormData = z.infer<typeof absenceSchema>;
 
 /**
  * Shift Parameter validation schema
- * Imported from dedicated shiftParameterSchemas.ts for modularity
  */
-export { shiftParameterInputSchema, dayFormSchema } from './shiftParameterSchemas';
-export type { ShiftParameterInput, DayFormSchema } from './shiftParameterSchemas';
+export const shiftParameterSchema = z.object({
+  id: z.string().optional(),
+  dzien_tygodnia: z
+    .number()
+    .int()
+    .min(0, 'Dzień musi być od 0 do 6')
+    .max(6, 'Dzień musi być od 0 do 6'),
+  typ_zmiany: z.enum(['Rano', 'Środek', 'Popoludniu'] as const, {
+    message: 'Proszę wybrać prawidłowy typ zmiany',
+  }),
+  godzina_od: z
+    .string()
+    .regex(/^([0-1][0-9]|2[0-3]):([0-5]\d)$/, 'Proszę podać czas w formacie HH:MM'),
+  godzina_do: z
+    .string()
+    .regex(/^([0-1][0-9]|2[0-3]):([0-5]\d)$/, 'Proszę podać czas w formacie HH:MM'),
+  liczba_obsad: z
+    .number()
+    .int()
+    .positive('Liczba obsad musi być większa od 0'),
+  czy_prowadzacy: z.boolean().default(false),
+  utworzono: z.string().optional(),
+  zaktualizowano: z.string().optional(),
+}).refine(
+  (data) => {
+    const [fromHour, fromMin] = data.godzina_od.split(':').map(Number);
+    const [toHour, toMin] = data.godzina_do.split(':').map(Number);
+    return fromHour * 60 + fromMin < toHour * 60 + toMin;
+  },
+  {
+    message: 'Godzina rozpoczęcia musi być przed godziną zakończenia',
+    path: ['godzina_do'],
+  }
+);
 
-/**
- * Legacy type alias for backward compatibility
- * Use ShiftParameterInput from shiftParameterSchemas instead
- * @deprecated Use ShiftParameterInput from shiftParameterSchemas
- */
-export type ShiftParameterFormData = z.infer<typeof shiftParameterInputSchema>;
+export type ShiftParameterFormData = z.infer<typeof shiftParameterSchema>;
 
 /**
  * Holiday validation schema
@@ -171,3 +197,9 @@ export const ruleSchema = z.object({
 });
 
 export type RuleFormData = z.infer<typeof ruleSchema>;
+
+/**
+ * Re-export shift parameter schemas from dedicated module
+ */
+export { shiftParameterInputSchema, dayFormSchema };
+export type { ShiftParameterInput, DayFormSchema } from './shiftParameterSchemas';
