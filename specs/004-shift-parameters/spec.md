@@ -75,61 +75,6 @@ Manager przechodzi do dowolnego dnia i widzi istniejące parametry zmian (załad
 
 ---
 
-### User Story 4 - Backend obsługuje wszystkie operacje CRUD dla shift parameters (Priority: P1)
-
-Backend API endpoint `/shift-parameters` prawidłowo obsługuje wszystkie operacje: GET (pobieranie), POST (tworzenie), PUT (edycja), DELETE (usunięcie). Dla każdej operacji zwracane są odpowiednie status kody HTTP i komunikaty błędów.
-
-**Why this priority**: Bez prawidłowej integracji z backendem frontend nie może działać.
-
-**Independent Test**: Backend może być testowany niezależnie z curl lub Postman - każda operacja CRUD jest testowalna.
-
-**Acceptance Scenarios**:
-
-1. **Given** backend jest uruchomiony, **When** wysłany jest GET request na `/shift-parameters`, **Then** serwer zwraca status 200 i listę wszystkich parametrów zmian
-2. **Given** request zawiera query param `?day=0`, **When** wysłany jest GET, **Then** serwer zwraca tylko parametry dla poniedziałku
-3. **Given** wysłany jest POST request na `/shift-parameters` z prawidłowymi danymi, **When** serwer przetwarza żądanie, **Then** zwraca status 201 i nowy parametr z ID
-4. **Given** wysłany jest PUT request na `/shift-parameters/1` z aktualizacją, **When** serwer przetwarza, **Then** zwraca status 200 i zaktualizowany parametr
-5. **Given** wysłany jest DELETE request na `/shift-parameters/1`, **When** parametr istnieje, **Then** serwer zwraca status 204 i parametr jest usunięty
-6. **Given** wysłany jest request z niepełnymi danymi, **When** backend waliduje, **Then** zwraca status 400 z komunikatem błędu
-7. **Given** wysłany jest request dla nieistniejącego ID, **When** backend szuka parametru, **Then** zwraca status 404
-
----
-
-### User Story 5 - Frontend waliduje dane za pomocą Zod schema (Priority: P1)
-
-Frontend używa Zod schema do walidacji wszystkich pól formularza przed wysłaniem na backend. Błędy walidacji są wyświetlane obok pól z jasnymi komunikatami w języku polskim. Walidacja zachodzi zarówno na zmianę pola (blur) jak i przed wysłaniem.
-
-**Why this priority**: Zod validation zapewnia type-safety i spójne komunikaty błędów.
-
-**Independent Test**: Frontend może być testowany przez wypełnianie formularza ze złymi danymi i sprawdzenie komunikatów błędów.
-
-**Acceptance Scenarios**:
-
-1. **Given** formularz jest otwarty, **When** manager opuszcza pole "godzina_od" puste, **Then** pojawia się błąd walidacji "To pole jest wymagane"
-2. **Given** manager wpisuje "abcd" w pole "godzina_od", **When** opuszcza pole, **Then** pojawia się błąd "Godzina musi być w formacie HH:MM (np. 09:30)"
-3. **Given** manager wpisuje "25:00" w pole "godzina_od", **When** waliduje, **Then** pojawia się błąd "Godzina musi być między 00:00 a 23:59"
-4. **Given** manager wpisuje "-5" w pole "liczba_obsad", **When** waliduje, **Then** pojawia się błąd "Liczba obsad musi być większa lub równa 0"
-5. **Given** wszystkie pola są prawidłowo wypełnione, **When** manager kliknie "Zapisz", **Then** brak błędów walidacji i żądanie idzie na backend
-
----
-
-### User Story 6 - React Hook Form zarządza stanem formularza (Priority: P1)
-
-Komponent używa React Hook Form do zarządzania stanem formularza dla każdego dnia. Formularz jest renderowany za pomocą react-hook-form API (useForm, useFieldArray, register, handleSubmit, watch). Każde pole jest wpisywane w schemat Zod dla pełnej walidacji.
-
-**Why this priority**: React Hook Form zapewnia efektywne zarządzanie stanem formularza i integruje się z Zod.
-
-**Independent Test**: Frontend może być testowany przez zmianę wartości pól i sprawdzenie, że stan jest prawidłowo śledzony i walidowany.
-
-**Acceptance Scenarios**:
-
-1. **Given** komponent jest zamontowany, **When** React Hook Form inicjalizuje formularz, **Then** pola są zarejestrowane z Zod schematem
-2. **Given** manager zmienia wartość pola, **When** pole traci focus, **Then** React Hook Form waliduje wartość za pomocą Zod
-3. **Given** manager wypełni formularz prawidłowo, **When** kliknie "Zapisz", **Then** handleSubmit wywoła callback z walidowanymi danymi
-4. **Given** formularz ma pola dynamiczne (np. dodatkowe zmiany), **When** manager dodaje zmianę, **Then** useFieldArray zarządza nową pozycją w tablicy
-5. **Given** dane zostały załadowane z bazy, **When** formularz się inicjalizuje, **Then** pola są wypełnione wartościami za pomocą `reset()` z React Hook Form
-
----
 
 ### Edge Cases
 
@@ -186,13 +131,6 @@ Komponent używa React Hook Form do zarządzania stanem formularza dla każdego 
 - **FR-024**: Wszystkie endpointy MUSZĄ walidować dane wejściowe i zwracać status 400 dla niepełnych danych
 - **FR-025**: Wszystkie endpointy MUSZĄ zwracać status 404 dla nieistniejących parametrów
 
-**Integration Testing**
-
-- **FR-026**: System MUSI prawidłowo wykonać create dla nowego parametru z frontend na backend
-- **FR-027**: System MUSI prawidłowo wykonać read (GET) dla każdego dnia
-- **FR-028**: System MUSI prawidłowo wykonać update (PUT) dla istniejącego parametru
-- **FR-029**: System MUSI prawidłowo wykonać delete dla istniejącego parametru
-- **FR-030**: System MUSI obsługiwać wszystkie CRUD operacje dla każdego dnia tygodnia (0-6)
 
 ### Key Entities
 
@@ -222,8 +160,6 @@ Komponent używa React Hook Form do zarządzania stanem formularza dla każdego 
 - **SC-009**: Dodanie i usunięcie zmiany dynamicznie aktualizuje UI
 - **SC-010**: 100% pól formularza ma komunikaty błędów dla nieprawidłowych danych
 - **SC-011**: React Hook Form zmniejsza boilerplate stanu formularza w stosunku do uncontrolled components
-- **SC-012**: Komponenty spełniają 100% acceptance criteria z feature spec
-- **SC-013**: Integracja wszystkich 4 operacji CRUD (Create, Read, Update, Delete) jest przetestowana dla każdego dnia
 
 ---
 
