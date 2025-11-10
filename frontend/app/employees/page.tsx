@@ -12,26 +12,23 @@ import * as Tabs from '@radix-ui/react-tabs';
 import { EmployeesTab } from '@/components/employees/EmployeesTab';
 import { UrlopyTab } from '@/components/employees/UrlopyTab';
 import { ZwolnieniaTab } from '@/components/employees/ZwolnieniaTab';
-import { ParametryZmianTab } from '@/components/employees/ParametryZmianTab';
-import { SwietaTab } from '@/components/employees/SwietaTab';
-import { RegulyTab } from '@/components/employees/RegulyTab';
 
 /**
  * Tab configuration
+ * Zakładki: Wszyscy, Urlopy, Zwolnienia
+ * Przeniesione do /settings: Parametry zmian, Reguły
+ * Usunięte: Święta (dostępne w /settings)
  */
 const TABS = [
   { id: 'wszyscy', label: 'Wszyscy', component: EmployeesTab },
   { id: 'urlopy', label: 'Urlopy', component: UrlopyTab },
   { id: 'zwolnienia', label: 'Zwolnienia', component: ZwolnieniaTab },
-  { id: 'parametry-zmian', label: 'Parametry zmian', component: ParametryZmianTab },
-  { id: 'swieta', label: 'Święta', component: SwietaTab },
-  { id: 'reguly', label: 'Reguły', component: RegulyTab },
 ] as const;
 
 /**
  * Employees Page
  */
-export default function EmployeesPage(): JSX.Element {
+export default function EmployeesPage(): React.ReactElement {
   const searchParams = useSearchParams();
   const router = useRouter();
 
