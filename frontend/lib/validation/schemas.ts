@@ -21,7 +21,7 @@ export const employeeSchema = z.object({
   status: z.enum(['Aktywny', 'Na urlopie', 'Chorobowe'] as const, {
     message: 'Proszę wybrać prawidłowy status',
   }),
-  etat: z.enum([1.0, 0.75, 0.5, 0.25] as const, {
+  etat: z.union([z.literal(1.0), z.literal(0.75), z.literal(0.5), z.literal(0.25)], {
     message: 'Proszę wybrać prawidłowy etat',
   }),
   utworzono: z.string().optional(),
@@ -74,7 +74,7 @@ export const shiftParameterSchema = z.object({
   liczba_obsad: z
     .number()
     .int()
-    .positive('Liczba obsad musi być większa od 0'),
+    .nonnegative('Liczba obsad musi być dodatnia'),
   czy_prowadzacy: z.boolean().default(false),
   utworzono: z.string().optional(),
   zaktualizowano: z.string().optional(),
@@ -152,7 +152,7 @@ export type StaffingTemplateFormData = z.infer<typeof staffingTemplateSchema>;
  */
 export const hourLimitSchema = z.object({
   id: z.string().optional(),
-  etat: z.enum([1.0, 0.75, 0.5, 0.25] as const, {
+  etat: z.union([z.literal(1.0), z.literal(0.75), z.literal(0.5), z.literal(0.25)], {
     message: 'Proszę wybrać prawidłowy etat',
   }),
   max_dziennie: z
@@ -172,8 +172,8 @@ export const hourLimitSchema = z.object({
 }).refine(
   (data) =>
     data.max_dziennie * 5 <= data.max_tygodniowo &&
-    data.max_tygodniowo * 4 <= data.max_miesięcznie &&
-    data.max_miesięcznie * 3 <= data.max_kwartalnie,
+    (data as any).max_tygodniowo * 4 <= (data as any).max_miesięcznie &&
+    (data as any).max_miesięcznie * 3 <= (data as any).max_kwartalnie,
   {
     message: 'Limity muszą być spójne (dzienny < tygodniowy < miesięczny < kwartalny)',
     path: ['max_kwartalnie'],

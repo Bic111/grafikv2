@@ -67,3 +67,35 @@ export const DAY_NAMES = [
  * Shift type names for UI display
  */
 export const SHIFT_TYPES = ['Rano', 'Środek', 'Popoludniu'];
+
+/**
+ * Form representation of a single shift (with localId for unsaved shifts)
+ */
+export interface ShiftFormValue extends Omit<ShiftParameter, 'id'> {
+  /** Local ID for unsaved shifts (used by React Hook Form) */
+  localId: string;
+  /** Backend ID for saved shifts (optional) */
+  id?: string;
+}
+
+/**
+ * Form data structure for a single day (per React Hook Form usage)
+ */
+export interface DayFormData {
+  /** Array of default shift configurations for the day */
+  defaultShifts: ShiftFormValue[];
+  /** Array of lead shift configurations for the day */
+  leadShifts: ShiftFormValue[];
+}
+
+/**
+ * Combined form data for all days
+ */
+export type AllDaysFormData = Record<number, DayFormData>;
+
+/**
+ * Form submission payload for a single shift
+ */
+export type ShiftSubmissionPayload = CreateShiftParameterInput & {
+  id?: string;
+};
