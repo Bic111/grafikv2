@@ -70,13 +70,13 @@ All 3 stories are **independent** and can be implemented in parallel, but follow
 
 ### Implementation Tasks
 
-- [ ] T013 [P] [US2] Implement `useFieldArray` for `defaultShifts` in main component (manage array of default shifts)
-- [ ] T014 [P] [US2] Implement `useFieldArray` for `leadShifts` in main component (manage array of lead shifts)
-- [ ] T015 [US2] Add "+ dodaj kolejną zmianę" button for both categories (default, lead) in DaySection
-- [ ] T016 [US2] Implement shift removal logic with confirmation dialog for shifts with IDs (already in database)
-- [ ] T017 [US2] Implement immediate UI removal for unsaved shifts (no ID) without confirmation
-- [ ] T018 [US2] Validate minimum 3 shifts per category (Rano, Środek, Popoludniu) before save
-- [ ] T019 [US2] Ensure "Zapisz" button is disabled during submission (prevent double-submit)
+- [x] T013 [P] [US2] Implement `useFieldArray` for `defaultShifts` in main component (manage array of default shifts)
+- [x] T014 [P] [US2] Implement `useFieldArray` for `leadShifts` in main component (manage array of lead shifts)
+- [x] T015 [US2] Add "+ dodaj kolejną zmianę" button for both categories (default, lead) in DaySection
+- [x] T016 [US2] Implement shift removal logic with confirmation dialog for shifts with IDs (already in database)
+- [x] T017 [US2] Implement immediate UI removal for unsaved shifts (no ID) without confirmation
+- [x] T018 [US2] Validate minimum 3 shifts per category (Rano, Środek, Popoludniu) before save
+- [x] T019 [US2] Ensure "Zapisz" button is disabled during submission (prevent double-submit)
 
 ---
 
@@ -245,7 +245,7 @@ Phase 5 (all): T028-T034 sequential
 **Phase 1**: ✅ COMPLETE (T001-T004)
 **Phase 2**: ✅ COMPLETE (T005-T012) - User Story 1 (Form Validation with RHF + Zod)
   - T005: ✅ RHF refactoring with per-day forms and useRef for form management
-  - T006: ⏳ ShiftParameterForm sub-component (optional - inlined in main component)
+  - T006: ✅ ShiftParameterForm logic integrated in DayFormSection
   - T007: ✅ Zod schema validation with Polish error messages
   - T008: ✅ Form field rendering with error display
   - T009: ✅ Blur-triggered validation enabled
@@ -253,9 +253,18 @@ Phase 5 (all): T028-T034 sequential
   - T011: ✅ Loading spinner during data fetch
   - T012: ✅ Success message display
 
-**Phase 3-5**: ⏳ Ready for Implementation - Dynamic shifts, backend integration, edge cases
+**Phase 3**: ✅ COMPLETE (T013-T019) - User Story 2 (Dynamic Field Management)
+  - T013: ✅ useFieldArray for defaultShifts (proper array management)
+  - T014: ✅ useFieldArray for leadShifts (proper array management)
+  - T015: ✅ "+ dodaj kolejną zmianę" button for both categories
+  - T016: ✅ Shift removal with confirmation dialog (saved shifts)
+  - T017: ✅ Immediate UI removal for unsaved shifts (no confirmation)
+  - T018: ✅ Minimum 3 shifts per category validation
+  - T019: ✅ Save button disabled during submission (prevent double-submit)
 
-**Next**: T013-T019 (Phase 3 - Dynamic field management with useFieldArray)
+**Phase 4-5**: ⏳ Ready for Implementation - Backend integration, edge cases, polish
 
-**Estimated Timeline**: Phase 2 complete, Phase 3 (2-3 days), Phase 4 (2-3 days), Phase 5 (1 day)
+**Next**: T020-T027 (Phase 4 - Backend integration with CRUD operations)
+
+**Estimated Timeline**: Phase 1-3 complete, Phase 4 (2-3 days), Phase 5 (1 day)
 
