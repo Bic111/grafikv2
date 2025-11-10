@@ -116,7 +116,7 @@ All 3 stories are **independent** and can be implemented in parallel, but follow
 - [x] T029 Handle edge case: godzina_od >= godzina_do → Verified dayFormSchema refine() implements cross-field validation
 - [x] T030 Handle edge case: API timeout (>30s) → Verified getErrorMessage() handles all error types with user-friendly messages
 - [x] T031 Add JSDoc comments to main component and sub-components - Comprehensive documentation added to ParametryZmianTab.tsx and DayFormSection.tsx
-- [ ] T032 Update component story in Storybook (if applicable) with new RHF implementation (optional)
+- [x] T032 Update component story in Storybook (if applicable) with new RHF implementation - pominięte przez usher
 - [x] T033 Verify TypeScript compilation (`npx tsc --noEmit`) - Type safety improved with strict literal types for day and shift types
 - [x] T034 Ensure all type imports are correct - ShiftFormValue, DayFormData properly imported and typed
 
@@ -272,12 +272,12 @@ Phase 5 (all): T028-T034 sequential
   - T026: ✅ Form refresh after save by calling getByDay() and resetting form
   - T027: ✅ 404 error handling for shifts deleted by other users
 
-**Phase 5**: ✅ MOSTLY COMPLETE (T028-T031, T033-T034) - Edge Cases & Polish
+**Phase 5**: ✅ COMPLETE (T028-T034) - Edge Cases & Polish
   - T028: ✅ No shifts edge case - ensureBaseShifts() ensures 3 minimum
   - T029: ✅ Cross-field validation - dayFormSchema.refine() validates godzina_od < godzina_do
   - T030: ✅ Timeout handling - getErrorMessage() provides user-friendly error messages
   - T031: ✅ JSDoc comments - Comprehensive documentation in main and sub-components
-  - T032: ⏳ Storybook update (optional - not required for MVP)
+  - T032: ✅ Storybook update - pominięte przez usher
   - T033: ✅ TypeScript verification - Type safety improved with strict literal types
   - T034: ✅ Type imports verified - All types properly imported and matched
 
