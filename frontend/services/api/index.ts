@@ -7,6 +7,7 @@ export { absenceAPI } from './absences';
 export { shiftParameterAPI } from './shifts';
 export { holidayAPI } from './holidays';
 export { ruleAPI, hourLimitAPI } from './rules';
+export { scheduleAPI } from './schedule';
 
 export { apiClient } from './client';
 export { ApiClient } from './client';

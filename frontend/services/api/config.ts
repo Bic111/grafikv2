@@ -25,5 +25,6 @@ export const DEFAULT_HEADERS = {
 
 /**
  * Timeout for API requests (in milliseconds)
+ * Reduced to 8 seconds for faster feedback on connection issues
  */
-export const REQUEST_TIMEOUT = 30000;
+export const REQUEST_TIMEOUT = 8000;

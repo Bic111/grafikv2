@@ -4,7 +4,7 @@
  */
 export interface Employee {
   /** Unique identifier for the employee */
-  id: string;
+  id: number;
   /** Employee's first name */
   imie: string;
   /** Employee's last name */

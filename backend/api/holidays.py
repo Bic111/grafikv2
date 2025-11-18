@@ -21,9 +21,9 @@ def serialize_holiday(holiday: Holiday) -> Dict[str, Any]:
     """Serialize Holiday model to dict."""
     return {
         "id": holiday.id,
-        "date": holiday.date.isoformat() if isinstance(holiday.date, date) else None,
-        "name": holiday.name,
-        "coverage_overrides": holiday.coverage_overrides,
+        "data": holiday.date.isoformat() if isinstance(holiday.date, date) else None,
+        "nazwa": holiday.name,
+        "opis": holiday.coverage_overrides,
         "store_closed": holiday.store_closed,
     }
 
@@ -40,15 +40,26 @@ def list_holidays():
 def create_holiday():
     """Create a new holiday."""
     payload = request.get_json(silent=True) or {}
+
+    # Map Polish field names to English for internal processing
+    # Frontend sends: data, nazwa, opis, store_closed
+    # Internal processing expects: date, name, coverage_overrides, store_closed
+    normalized = {
+        'date': payload.get('data'),
+        'name': payload.get('nazwa'),
+        'coverage_overrides': payload.get('opis'),
+        'store_closed': payload.get('store_closed', False),
+    }
+
     required = ["date", "name"]
-    missing = [field for field in required if not payload.get(field)]
+    missing = [field for field in required if not normalized.get(field)]
     if missing:
         return jsonify(response_message("Missing required fields", missing=missing)), 400
 
     try:
         with session_scope() as session:
             loader = ConfigurationLoader(session)
-            holiday = loader.create_or_update_holiday_api(payload)
+            holiday = loader.create_or_update_holiday_api(normalized)
             session.flush()
             data = serialize_holiday(holiday)
         return jsonify(data), 201
@@ -87,12 +98,16 @@ def update_holiday(holiday_id: int):
             return jsonify(response_message("Holiday not found")), 404
 
         try:
+            # Map Polish field names to English for internal processing
+            normalized = {
+                'date': payload.get('data') or holiday.date.isoformat(),
+                'name': payload.get('nazwa') or holiday.name,
+                'coverage_overrides': payload.get('opis'),
+                'store_closed': payload.get('store_closed', holiday.store_closed),
+            }
+
             loader = ConfigurationLoader(session)
-            # Update using the existing date if not provided
-            if "date" not in payload:
-                payload["date"] = holiday.date.isoformat()
-            
-            updated = loader.create_or_update_holiday_api(payload)
+            updated = loader.create_or_update_holiday_api(normalized)
             session.flush()
             return jsonify(serialize_holiday(updated))
         except ValueError as exc:

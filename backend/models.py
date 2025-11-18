@@ -11,6 +11,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.types import JSON, Text, Boolean
+from sqlalchemy import Float
+from datetime import datetime
 
 
 Base = declarative_base()
@@ -84,7 +86,7 @@ class Pracownik(Base):
     imie = Column(String(80), nullable=False)
     nazwisko = Column(String(120), nullable=False)
     rola_id = Column(Integer, ForeignKey("role.id"), nullable=True)
-    etat = Column(String(32), nullable=True)
+    etat = Column(Float, nullable=True)
     limit_godzin_miesieczny = Column(Integer, nullable=True)
     preferencje = Column(JSON, nullable=True)
     data_zatrudnienia = Column(Date, nullable=True)
@@ -186,3 +188,27 @@ class ParametryZmiany(Base):
     godzina_do = Column(String(5), nullable=False)  # HH:MM format
     liczba_obsad = Column(Integer, nullable=True)
     czy_prowadzacy = Column(Boolean, default=False)
+
+
+class Rule(Base):
+    __tablename__ = 'rules'
+
+    id = Column(Integer, primary_key=True, index=True)
+    nazwa = Column(String(255), nullable=False)
+    opis = Column(Text, nullable=True)
+    typ = Column(String(80), nullable=True)
+    aktywna = Column(Boolean, default=True)
+    utworzono = Column(DateTime, default=datetime.utcnow, nullable=False)
+    zaktualizowano = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class HourLimit(Base):
+    __tablename__ = 'hour_limits'
+
+    id = Column(Integer, primary_key=True, index=True)
+    etat = Column(Float, nullable=False)
+    max_dziennie = Column(Integer, nullable=True)
+    max_tygodniowo = Column(Integer, nullable=True)
+    # DB column without diacritics; frontend normalizer handles variants
+    max_miesiecznie = Column(Integer, nullable=True)
+    max_kwartalnie = Column(Integer, nullable=True)

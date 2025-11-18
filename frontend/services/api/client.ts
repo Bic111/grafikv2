@@ -7,11 +7,12 @@ import { handleErrorResponse, NetworkError } from './errors';
 
 /**
  * Generic fetch wrapper with error handling and timeout
+ * Reduced maxRetries to 1 for faster failure feedback
  */
 async function fetchWithTimeout(
   url: string,
   options: RequestInit = {},
-  maxRetries: number = 3
+  maxRetries: number = 1
 ): Promise<Response> {
   let lastError: unknown = null;
 

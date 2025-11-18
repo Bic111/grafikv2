@@ -41,21 +41,21 @@ def seed_initial_data() -> None:
     ]
 
     default_employees: List[Dict] = [
-        {"imie": "Beata", "nazwisko": "Gibas", "rola": "Kierownik", "etat": "Pełen etat"},
-        {"imie": "Angelika", "nazwisko": "Chabowska", "rola": "Kasjer", "etat": "3/4 etatu"},
-        {"imie": "Martyna", "nazwisko": "Ziemińska", "rola": "SSK", "etat": "Pełen etat"},
-        {"imie": "Dorota", "nazwisko": "Zawadzka", "rola": "Kasjer", "etat": "Pełen etat"},
-        {"imie": "Karolina", "nazwisko": "Koseda", "rola": "Kasjer", "etat": "3/4 etatu"},
-        {"imie": "Magdalena", "nazwisko": "Talaska", "rola": "Kasjer", "etat": "3/4 etatu"},
-        {"imie": "Agnieszka", "nazwisko": "Karczewska", "rola": "Kasjer", "etat": "Pełen etat"},
-        {"imie": "Sylwia", "nazwisko": "Panejko", "rola": "Kasjer", "etat": "3/4 etatu"},
-        {"imie": "Agnieszka", "nazwisko": "Merszałek", "rola": "Z-ca kierownika", "etat": "Pełen etat"},
-        {"imie": "Anna", "nazwisko": "Przybysz", "rola": "SSK", "etat": "Pełen etat"},
-        {"imie": "Małgorzata", "nazwisko": "Korus", "rola": "SSK", "etat": "Pełen etat"},
-        {"imie": "Klaudia", "nazwisko": "Borecka", "rola": "Kasjer", "etat": "3/4 etatu"},
-        {"imie": "Paulina", "nazwisko": "Jakusz-Gostomska", "rola": "Kasjer", "etat": "Pełen etat"},
-        {"imie": "Bożena", "nazwisko": "Stosik", "rola": "Kasjer", "etat": "Pełen etat"},
-        {"imie": "Anna", "nazwisko": "Frąckowska", "rola": "Kasjer", "etat": "Pełen etat"},
+        {"imie": "Beata", "nazwisko": "Gibas", "rola": "Kierownik", "etat": 1.0},
+        {"imie": "Angelika", "nazwisko": "Chabowska", "rola": "Kasjer", "etat": 0.75},
+        {"imie": "Martyna", "nazwisko": "Ziemińska", "rola": "SSK", "etat": 1.0},
+        {"imie": "Dorota", "nazwisko": "Zawadzka", "rola": "Kasjer", "etat": 1.0},
+        {"imie": "Karolina", "nazwisko": "Koseda", "rola": "Kasjer", "etat": 0.75},
+        {"imie": "Magdalena", "nazwisko": "Talaska", "rola": "Kasjer", "etat": 0.75},
+        {"imie": "Agnieszka", "nazwisko": "Karczewska", "rola": "Kasjer", "etat": 1.0},
+        {"imie": "Sylwia", "nazwisko": "Panejko", "rola": "Kasjer", "etat": 0.75},
+        {"imie": "Agnieszka", "nazwisko": "Merszałek", "rola": "Z-ca kierownika", "etat": 1.0},
+        {"imie": "Anna", "nazwisko": "Przybysz", "rola": "SSK", "etat": 1.0},
+        {"imie": "Małgorzata", "nazwisko": "Korus", "rola": "SSK", "etat": 1.0},
+        {"imie": "Klaudia", "nazwisko": "Borecka", "rola": "Kasjer", "etat": 0.75},
+        {"imie": "Paulina", "nazwisko": "Jakusz-Gostomska", "rola": "Kasjer", "etat": 1.0},
+        {"imie": "Bożena", "nazwisko": "Stosik", "rola": "Kasjer", "etat": 1.0},
+        {"imie": "Anna", "nazwisko": "Frąckowska", "rola": "Kasjer", "etat": 1.0},
     ]
 
     default_shifts: List[Dict] = [
@@ -172,7 +172,7 @@ def seed_initial_data() -> None:
 
 
         todays_date = date.today()
-        limit_map = {"Pełen etat": 168, "3/4 etatu": 126}
+        limit_map = {1.0: 168, 0.75: 126, 0.5: 84, 0.25: 42}
         for employee_data in default_employees:
             key = (employee_data["imie"], employee_data["nazwisko"])
             if key in existing_employees:

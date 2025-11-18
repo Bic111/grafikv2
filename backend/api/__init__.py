@@ -17,6 +17,8 @@ def register_api(app):
     from .validation import bp as validation_bp
     from .holidays import bp as holidays_bp
     from .staffing_requirements import bp as staffing_bp
+    from .rules import bp as rules_bp
+    from .hour_limits import bp as hour_limits_bp
 
     app.register_blueprint(absences_bp, url_prefix="/api")
     app.register_blueprint(employees_bp, url_prefix="/api")
@@ -29,3 +31,5 @@ def register_api(app):
     app.register_blueprint(validation_bp, url_prefix="/api")
     app.register_blueprint(holidays_bp, url_prefix="/api")
     app.register_blueprint(staffing_bp, url_prefix="/api")
+    app.register_blueprint(rules_bp, url_prefix="/api")
+    app.register_blueprint(hour_limits_bp, url_prefix="/api")

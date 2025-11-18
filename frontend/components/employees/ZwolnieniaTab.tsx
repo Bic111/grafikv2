@@ -51,8 +51,8 @@ export function ZwolnieniaTab(): JSX.Element {
       setIsLoading(true);
       setError(null);
 
-      // Fetch with typ=zwolnienie filter
-      const data = await absenceAPI.getAll({ typ: 'zwolnienie' });
+      // Fetch with typ_nieobecnosci=zwolnienie filter
+      const data = await absenceAPI.getAll({ typ_nieobecnosci: 'zwolnienie' });
       setSickLeaves(data);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -120,7 +120,7 @@ export function ZwolnieniaTab(): JSX.Element {
   };
 
   // Get employee name by ID
-  const getEmployeeName = (pracownikId: string): string => {
+  const getEmployeeName = (pracownikId: number): string => {
     const emp = employees.find((e) => e.id === pracownikId);
     return emp ? `${emp.imie} ${emp.nazwisko}` : `ID: ${pracownikId}`;
   };
@@ -269,13 +269,14 @@ export function ZwolnieniaTab(): JSX.Element {
       {/* Delete Confirmation Dialog */}
       {deleteConfirm && (
         <ConfirmDialog
+          isOpen={true}
           title="Potwierdź usunięcie"
           message={`Czy na pewno chcesz usunąć zwolnienie dla ${getEmployeeName(deleteConfirm.pracownik_id)}?`}
           confirmLabel="Usuń"
           cancelLabel="Anuluj"
           onConfirm={handleConfirmDelete}
           onCancel={handleCancelDelete}
-          variant="danger"
+          isDestructive={true}
         />
       )}
     </div>

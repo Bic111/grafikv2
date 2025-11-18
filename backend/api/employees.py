@@ -58,11 +58,15 @@ def create_employee():
     if limit_miesieczny is None:
         limit_miesieczny = payload.get("limit_godzin_miesieczny")
 
+    etat_value = payload.get("etat")
+    if etat_value is not None:
+        etat_value = float(etat_value)
+    
     employee = Pracownik(
         imie=payload["imie"],
         nazwisko=payload["nazwisko"],
         rola_id=payload.get("rola_id"),
-        etat=payload.get("etat"),
+        etat=etat_value,
         limit_godzin_miesieczny=limit_miesieczny,
         preferencje=payload.get("preferencje"),
         data_zatrudnienia=parse_date(payload.get("data_zatrudnienia")),
@@ -107,9 +111,15 @@ def update_employee(employee_id: int):
         if "limit_godzin_miesięczny" in payload and "limit_godzin_miesieczny" not in payload:
             payload["limit_godzin_miesieczny"] = payload["limit_godzin_miesięczny"]
 
-        for attr in ["imie", "nazwisko", "rola_id", "etat", "limit_godzin_miesieczny", "preferencje"]:
+        for attr in ["imie", "nazwisko", "rola_id", "limit_godzin_miesieczny", "preferencje"]:
             if attr in payload:
                 setattr(employee, attr, payload.get(attr))
+        
+        # Handle etat conversion explicitly
+        if "etat" in payload:
+            etat_value = payload.get("etat")
+            if etat_value is not None:
+                employee.etat = float(etat_value)
 
         if "data_zatrudnienia" in payload:
             employee.data_zatrudnienia = parse_date(payload.get("data_zatrudnienia"))

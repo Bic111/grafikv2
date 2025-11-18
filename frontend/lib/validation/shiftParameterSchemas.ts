@@ -15,12 +15,19 @@ const TIME_REGEX = /^([0-1][0-9]|2[0-3]):([0-5]\d)$/
 /**
  * Validates time format and range
  */
-const timeSchema = z
+// Allow empty time ("") to represent "brak tej zmiany" for danym dniu.
+// If provided, it must match HH:MM and be within valid range.
+const timeMaybeEmptySchema = z
   .string()
-  .min(1, 'To pole jest wymagane')
-  .regex(TIME_REGEX, 'Godzina musi być w formacie HH:MM (np. 09:30)')
+  .optional()
+  .transform((v) => (v === undefined ? '' : v))
+  .refine(
+    (time) => time === '' || TIME_REGEX.test(time),
+    'Godzina musi być w formacie HH:MM (np. 09:30)'
+  )
   .refine(
     (time) => {
+      if (time === '') return true
       const [hours, minutes] = time.split(':').map(Number)
       return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59
     },
@@ -35,27 +42,53 @@ export const shiftParameterInputSchema = z
   .object({
     dzien_tygodnia: z.number().int().min(0).max(6),
     typ_zmiany: z.enum(['Rano', 'Środek', 'Popoludniu']),
-    godzina_od: timeSchema,
-    godzina_do: timeSchema,
+    godzina_od: timeMaybeEmptySchema,
+    godzina_do: timeMaybeEmptySchema,
     liczba_obsad: z
       .number()
       .int()
       .nonnegative('Liczba obsad musi być dodatnia'),
     czy_prowadzacy: z.boolean().default(false),
   })
-  .refine(
-    (data) => {
-      const [fromHour, fromMin] = data.godzina_od.split(':').map(Number)
-      const [toHour, toMin] = data.godzina_do.split(':').map(Number)
-      const fromMinutes = fromHour * 60 + fromMin
-      const toMinutes = toHour * 60 + toMin
-      return fromMinutes < toMinutes
-    },
-    {
-      message: 'Godzina rozpoczęcia musi być wcześniejsza niż godzina końca',
-      path: ['godzina_do'],
+  .superRefine((data, ctx) => {
+    const fromEmpty = !data.godzina_od || data.godzina_od === ''
+    const toEmpty = !data.godzina_do || data.godzina_do === ''
+
+    // Case 1: both empty -> allowed, but enforce liczba_obsad = 0
+    if (fromEmpty && toEmpty) {
+      if (data.liczba_obsad !== 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Gdy brak godzin, liczba pracowników musi wynosić 0',
+          path: ['liczba_obsad'],
+        })
+      }
+      return
     }
-  )
+
+    // Case 2: one empty, one filled -> error
+    if (fromEmpty !== toEmpty) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Uzupełnij oba pola czasu lub zostaw oba puste',
+        path: fromEmpty ? ['godzina_od'] : ['godzina_do'],
+      })
+      return
+    }
+
+    // Case 3: both provided -> ensure from < to
+    const [fromHour, fromMin] = data.godzina_od!.split(':').map(Number)
+    const [toHour, toMin] = data.godzina_do!.split(':').map(Number)
+    const fromMinutes = fromHour * 60 + fromMin
+    const toMinutes = toHour * 60 + toMin
+    if (!(fromMinutes < toMinutes)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Godzina rozpoczęcia musi być wcześniejsza niż godzina końca',
+        path: ['godzina_do'],
+      })
+    }
+  })
 
 /**
  * Type for a single shift in the form

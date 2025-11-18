@@ -5,6 +5,7 @@ import CalendarView from "../../components/CalendarView";
 import GeneratorPanel from "../../components/GeneratorPanel";
 import MonthNavigator from "../../components/MonthNavigator";
 import Legend from "../../components/Legend";
+import { fetchShiftParameters, ShiftParameter } from "../../services/api/shiftParameters";
 
 // ... (reszta typów bez zmian)
 type ScheduleIssue = {
@@ -77,6 +78,7 @@ export default function SchedulePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentDisplayMonth, setCurrentDisplayMonth] = useState('');
+  const [shiftParams, setShiftParams] = useState<ShiftParameter[] | null>(null);
 
   // ... (reszta hooków i logiki bez zmian)
   const [draggedEntryId, setDraggedEntryId] = useState<number | null>(null);
@@ -110,21 +112,26 @@ export default function SchedulePage() {
     void load(currentDisplayMonth);
   }, [currentDisplayMonth]);
 
-  // Drugi useEffect do załadowania danych początkowych
+  // Drugi useEffect do załadowania danych początkowych (tylko raz)
   useEffect(() => {
     const loadInitial = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_BASE_URL}/api/grafiki/ostatni`);
-        if (!response.ok) {
+        // Równolegle pobierz parametry zmian
+        const [resp, params] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/grafiki/ostatni`),
+          fetchShiftParameters(),
+        ]);
+        if (!resp.ok) {
           const problem = await response.json().catch(() => null);
           throw new Error(problem?.message ?? "Brak grafiku do wyświetlenia");
         }
-        const data = (await response.json()) as ScheduleResponse;
+        const data = (await resp.json()) as ScheduleResponse;
         setSchedule(data);
         setEntries(data.entries);
-        setCurrentDisplayMonth(data.miesiac_rok); // Ustawiamy miesiąc na podstawie danych
+        setCurrentDisplayMonth(data.miesiac_rok); // To wywoła pierwszy useEffect
+        setShiftParams(params);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Wystąpił nieznany błąd");
       } finally {
@@ -132,10 +139,8 @@ export default function SchedulePage() {
       }
     };
     // Uruchamiamy tylko raz, przy pierwszym załadowaniu komponentu
-    if (!currentDisplayMonth) {
-      void loadInitial();
-    }
-  }, []); // Pusta tablica zależności zapewnia jednorazowe wykonanie
+    loadInitial();
+  }, []); // Pusta tablica - wykonanie tylko raz przy mount
 
 
   const handleGenerate = async (year: number, month: number, generatorType: string, scenarioType?: string) => {
@@ -154,8 +159,11 @@ export default function SchedulePage() {
             }),
         });
         if (!response.ok) {
-            const problem = await response.json().catch(() => null);
-            throw new Error(problem?.message ?? 'Błąd podczas generowania grafiku');
+          const problem = await response.json().catch(() => null);
+          // Wzbogacony komunikat błędu o szczegóły z backendu
+          const base = problem?.message ?? 'Błąd podczas generowania grafiku';
+          const details = problem?.error ? `: ${problem.error}` : '';
+          throw new Error(base + details);
         }
         // Po udanym wygenerowaniu, odświeżamy dane
         const data = await response.json();
@@ -327,6 +335,7 @@ export default function SchedulePage() {
           onDrop={handleDrop}
           onDragStart={setDraggedEntryId}
           onDragEnd={() => setDraggedEntryId(null)}
+          shiftParams={shiftParams ?? []}
         />
       )}
     </div>

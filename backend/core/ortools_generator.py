@@ -142,6 +142,59 @@ class OrToolsGenerator:
         
         # Build holiday map
         self._build_holiday_map()
+
+    def _prevalidate_feasibility(self) -> None:
+        """Quick feasibility checks before building the CP model.
+
+        Raises:
+            GenerationError: when obvious staffing deficits make the model infeasible.
+        """
+        problems = []
+        # Precompute employees per role
+        employees_by_role: DefaultDict[str, List[Any]] = defaultdict(list)
+        for emp in self.employees:
+            role = getattr(emp, "rola", None)
+            role_name = getattr(role, "nazwa_roli", "") if role else ""
+            if role_name:
+                employees_by_role[role_name].append(emp)
+
+        for day in range(1, self.last_day + 1):
+            current_date = date(self.year, self.month, day)
+
+            # Skip closed store days
+            holiday = self.holiday_map.get(current_date)
+            if holiday is not None and bool(getattr(holiday, "store_closed", False)):
+                continue
+
+            # Build absent set for the day
+            absent_today = self.absence_map.get(current_date, set())
+
+            for shift in self.shifts:
+                raw_requirements = getattr(shift, "wymagana_obsada", None)
+                if isinstance(raw_requirements, dict):
+                    requirements = raw_requirements
+                elif raw_requirements:
+                    requirements = dict(raw_requirements)
+                else:
+                    requirements = {}
+
+                for role_name, required_count in requirements.items():
+                    pool = employees_by_role.get(role_name, [])
+                    # Available employees for this role on this day (not absent)
+                    available = [e for e in pool if getattr(e, "id", None) not in absent_today]
+                    if len(available) < int(required_count):
+                        problems.append(
+                            f"{current_date.isoformat()} '{getattr(shift, 'nazwa_zmiany', '?')}' — rola {role_name}: "
+                            f"wymagane {int(required_count)}, dostępne {len(available)}"
+                        )
+
+        if problems:
+            summary = problems[:5]
+            more = f" (… +{len(problems) - 5} więcej)" if len(problems) > 5 else ""
+            raise GenerationError(
+                "Braki w obsadzie uniemożliwiają wygenerowanie grafiku metodą OR-Tools.\n"
+                + "\n".join(summary) + more
+            )
         
     def _build_absence_map(self):
         """Build a map of dates to sets of absent employee IDs."""
@@ -425,6 +478,9 @@ class OrToolsGenerator:
         Raises:
             GenerationError: If no solution found
         """
+        # Wstępna prewalidacja wykonalności
+        self._prevalidate_feasibility()
+
         # Create variables and constraints
         self._create_variables()
         self._add_coverage_constraints()

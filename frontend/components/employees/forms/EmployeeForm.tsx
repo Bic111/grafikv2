@@ -52,6 +52,24 @@ export function EmployeeForm({
     },
   });
 
+  // Gdy przechodzimy z trybu dodawania do edycji (lub zmienia się wybrany pracownik),
+  // musimy zresetować wartości formularza – react-hook-form nie aktualizuje defaultValues po pierwszym renderze.
+  React.useEffect(() => {
+    if (initialData) {
+      // Zachowujemy pełne dane obiektu, aby wszystkie pola (w tym stanowisko) poprawnie się uzupełniły.
+      reset({
+        id: initialData.id,
+        imie: initialData.imie,
+        nazwisko: initialData.nazwisko,
+        stanowisko: initialData.stanowisko,
+        status: initialData.status,
+        etat: initialData.etat,
+        utworzono: initialData.utworzono,
+        zaktualizowano: initialData.zaktualizowano,
+      });
+    }
+  }, [initialData, reset]);
+
   const isProcessing = isSubmitting || isLoading;
 
   const handleFormSubmit = async (data: EmployeeFormData) => {

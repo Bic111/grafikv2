@@ -12,6 +12,7 @@ import type {
 } from '@/types';
 import { ApiClient } from './client';
 import { normalizeHourLimit, normalizeHourLimits, prepareForApi } from '@/utils/hour-limit-normalizer';
+import { normalizeRule, normalizeRules, prepareRuleForApi } from '@/utils/rule-normalizer';
 
 /**
  * RuleAPI client
@@ -21,28 +22,34 @@ class RuleAPI extends ApiClient {
    * Get all rules
    */
   async getAll(): Promise<Rule[]> {
-    return this.get<Rule[]>('/api/rules');
+    const data = await this.get<Rule[]>('/api/rules');
+    return normalizeRules(data);
   }
 
   /**
    * Get a single rule by ID
    */
   async getById(id: string): Promise<Rule> {
-    return this.get<Rule>(`/api/rules/${id}`);
+    const data = await this.get<Rule>(`/api/rules/${id}`);
+    return normalizeRule(data);
   }
 
   /**
    * Create a new rule
    */
   async create(data: CreateRuleInput): Promise<Rule> {
-    return this.post<Rule>('/api/rules', data);
+    const prepared = prepareRuleForApi<CreateRuleInput>(data);
+    const created = await this.post<Rule>('/api/rules', prepared);
+    return normalizeRule(created);
   }
 
   /**
    * Update an existing rule
    */
   async update(id: string, data: UpdateRuleInput): Promise<Rule> {
-    return this.put<Rule>(`/api/rules/${id}`, data);
+    const prepared = prepareRuleForApi<UpdateRuleInput>(data);
+    const updated = await this.put<Rule>(`/api/rules/${id}`, prepared);
+    return normalizeRule(updated);
   }
 
   /**
@@ -56,14 +63,23 @@ class RuleAPI extends ApiClient {
    * Get rules by type
    */
   async getByType(typ: string): Promise<Rule[]> {
-    return this.get<Rule[]>(`/api/rules?typ=${typ}`);
+    const data = await this.get<Rule[]>(`/api/rules?typ=${typ}`);
+    return normalizeRules(data);
   }
 
   /**
    * Get active rules
    */
   async getActive(): Promise<Rule[]> {
-    return this.get<Rule[]>('/api/rules?aktywna=true');
+    const data = await this.get<Rule[]>('/api/rules?aktywna=true');
+    return normalizeRules(data);
+  }
+
+  /**
+   * Alias for consistency with other API clients
+   */
+  async delete(id: string): Promise<void> {
+    return this.removeRule(id);
   }
 }
 

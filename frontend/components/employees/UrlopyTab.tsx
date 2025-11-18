@@ -55,8 +55,8 @@ export function UrlopyTab(): JSX.Element {
       setIsLoading(true);
       setError(null);
 
-      // Fetch with typ=urlop filter
-      const data = await absenceAPI.getAll({ typ: 'urlop' });
+      // Fetch with typ_nieobecnosci=urlop filter
+      const data = await absenceAPI.getAll({ typ_nieobecnosci: 'urlop' });
 
       // Apply year/month filters client-side
       const filtered = data.filter((vacation) => {
@@ -134,7 +134,7 @@ export function UrlopyTab(): JSX.Element {
   };
 
   // Get employee name by ID
-  const getEmployeeName = (pracownikId: string): string => {
+  const getEmployeeName = (pracownikId: number): string => {
     const emp = employees.find((e) => e.id === pracownikId);
     return emp ? `${emp.imie} ${emp.nazwisko}` : `ID: ${pracownikId}`;
   };
@@ -328,13 +328,14 @@ export function UrlopyTab(): JSX.Element {
       {/* Delete Confirmation Dialog */}
       {deleteConfirm && (
         <ConfirmDialog
+          isOpen={true}
           title="Potwierdź usunięcie"
           message={`Czy na pewno chcesz usunąć urlop dla ${getEmployeeName(deleteConfirm.pracownik_id)}?`}
           confirmLabel="Usuń"
           cancelLabel="Anuluj"
           onConfirm={handleConfirmDelete}
           onCancel={handleCancelDelete}
-          variant="danger"
+          isDestructive={true}
         />
       )}
     </div>

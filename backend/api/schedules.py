@@ -99,7 +99,13 @@ def generate_schedule():
             
             if generator_type == "ortools":
                 # Use OR-Tools generator
-                generator = OrToolsGenerator(session, year, month, scenario_type)
+                try:
+                    generator = OrToolsGenerator(session, year, month, scenario_type)
+                except ImportError as imp_err:
+                    return jsonify(response_message(
+                        "Środowisko nie ma zainstalowanej biblioteki OR-Tools",
+                        error=str(imp_err),
+                    )), 500
                 schedule, entries, issues = generator.generate()
                 runtime_ms = int((time() - start_time) * 1000)
             else:
@@ -109,6 +115,15 @@ def generate_schedule():
                 
         except GenerationError as exc:
             return jsonify(response_message("Nie można wygenerować grafiku", error=str(exc))), 400
+        except Exception as exc:
+            # Bezpieczny fallback błędów nieprzewidzianych z dodaniem typu wyjątku
+            import os
+            import traceback
+            error_text = f"{exc.__class__.__name__}: {str(exc)}"
+            payload = response_message("Nieznany błąd podczas generowania grafiku", error=error_text)
+            if os.getenv("FLASK_DEBUG", "0") == "1":
+                payload["trace"] = traceback.format_exc()
+            return jsonify(payload), 500
             
         shifts = session.query(Zmiana).all()
         absences = session.query(Nieobecnosc).all()
@@ -154,6 +169,47 @@ def latest_schedule():
         data = _serialize_schedule(schedule, entries)
         data["shifts"] = _serialize_shifts(shifts)
         data["absences"] = _serialize_absences(session.query(Nieobecnosc).all())
+        return jsonify(data)
+
+
+@bp.get("/grafiki/miesiac/<string:month>")
+def get_schedule_by_month(month: str):
+    """
+    Get schedule for specific month (format: YYYY-MM).
+    
+    Args:
+        month: Month in format YYYY-MM (e.g., "2025-11")
+    
+    Returns:
+        Schedule with entries, shifts, absences or 404 if not found
+    """
+    with session_scope() as session:
+        schedule = (
+            session.query(GrafikMiesieczny)
+            .filter(GrafikMiesieczny.miesiac_rok == month)
+            .order_by(GrafikMiesieczny.data_utworzenia.desc())
+            .first()
+        )
+        
+        if not schedule:
+            return jsonify(response_message(f"Brak grafiku dla {month}")), 404
+
+        entries = (
+            session.query(GrafikEntry)
+            .filter(GrafikEntry.grafik_miesieczny_id == schedule.id)
+            .options(
+                selectinload(GrafikEntry.pracownik).selectinload(Pracownik.rola),
+                selectinload(GrafikEntry.zmiana),
+            )
+            .order_by(GrafikEntry.data, GrafikEntry.zmiana_id)
+            .all()
+        )
+        shifts = session.query(Zmiana).all()
+        absences = session.query(Nieobecnosc).all()
+
+        data = _serialize_schedule(schedule, entries)
+        data["shifts"] = _serialize_shifts(shifts)
+        data["absences"] = _serialize_absences(absences)
         return jsonify(data)
 
 

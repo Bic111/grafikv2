@@ -25,7 +25,7 @@ class AbsenceAPI extends ApiClient {
   /**
    * Get a single absence by ID
    */
-  async getById(id: string): Promise<Absence> {
+  async getById(id: number): Promise<Absence> {
     return this.get<Absence>(`/api/nieobecnosci/${id}`);
   }
 
@@ -39,15 +39,16 @@ class AbsenceAPI extends ApiClient {
   /**
    * Update an existing absence record
    */
-  async update(id: string, data: UpdateAbsenceInput): Promise<Absence> {
+  async update(id: number, data: UpdateAbsenceInput): Promise<Absence> {
     return this.put<Absence>(`/api/nieobecnosci/${id}`, data);
   }
 
   /**
    * Delete an absence record
    */
-  async delete(id: string): Promise<void> {
-    return this.delete<void>(`/api/nieobecnosci/${id}`);
+  async delete(id: number): Promise<void> {
+    // Use base ApiClient.delete to avoid infinite recursion
+    return super.delete<void>(`/api/nieobecnosci/${id}`);
   }
 
   /**
@@ -55,7 +56,7 @@ class AbsenceAPI extends ApiClient {
    */
   async getVacations(rok: number, miesiac?: number): Promise<Absence[]> {
     const query = this.buildQueryString({
-      typ: 'urlop',
+      typ_nieobecnosci: 'urlop',
       rok,
       ...(miesiac && { miesiac }),
     });
@@ -67,7 +68,7 @@ class AbsenceAPI extends ApiClient {
    */
   async getSickLeaves(rok: number, miesiac?: number): Promise<Absence[]> {
     const query = this.buildQueryString({
-      typ: 'zwolnienie',
+      typ_nieobecnosci: 'zwolnienie',
       rok,
       ...(miesiac && { miesiac }),
     });
@@ -77,15 +78,15 @@ class AbsenceAPI extends ApiClient {
   /**
    * Get absences for a specific employee
    */
-  async getByEmployee(pracownik_id: string): Promise<Absence[]> {
+  async getByEmployee(pracownik_id: number): Promise<Absence[]> {
     return this.get<Absence[]>(`/api/nieobecnosci?pracownik_id=${pracownik_id}`);
   }
 
   /**
    * Get absences by type
    */
-  async getByType(typ: 'urlop' | 'zwolnienie' | 'inne'): Promise<Absence[]> {
-    return this.get<Absence[]>(`/api/nieobecnosci?typ=${typ}`);
+  async getByType(typ_nieobecnosci: 'urlop' | 'zwolnienie' | 'inne'): Promise<Absence[]> {
+    return this.get<Absence[]>(`/api/nieobecnosci?typ_nieobecnosci=${typ_nieobecnosci}`);
   }
 
   /**

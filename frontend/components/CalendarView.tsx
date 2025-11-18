@@ -2,6 +2,7 @@
 type Shift = {
   id: number;
   nazwa_zmiany: string;
+  godzina_rozpoczecia?: string | null;
 };
 
 type ScheduleEntry = {
@@ -10,6 +11,9 @@ type ScheduleEntry = {
     imie: string | null;
     nazwisko: string | null;
   } | null;
+  // Opcjonalne flagi wizualne
+  isLead?: boolean; // Osoba prowadząca zmianę
+  validationError?: boolean; // Błąd walidacji dla wpisu
 };
 
 type DayData = {
@@ -25,23 +29,57 @@ type CalendarViewProps = {
   onDrop: (date: string, shiftId: number) => void;
   onDragStart: (entryId: number) => void;
   onDragEnd: () => void;
+  shiftParams?: {
+    dzien_tygodnia: number;
+    typ_zmiany: string;
+    godzina_od: string; // HH:MM
+    godzina_do: string; // HH:MM
+  }[];
 };
 
-// Funkcja do mapowania nazw zmian na kolory Tailwind CSS
-const getShiftColor = (shiftName: string) => {
-  switch (shiftName.toLowerCase()) {
-    case 'poranna':
-      return 'bg-blue-600 hover:bg-blue-700';
-    case 'popołudniowa':
-      return 'bg-green-600 hover:bg-green-700';
-    case 'weekend':
-      return 'bg-purple-600 hover:bg-purple-700';
-    default:
-      return 'bg-gray-600 hover:bg-gray-700';
+// Kolory zgodne z legendą: Rano (blue), Środek (amber), Popołudnie (green)
+const getShiftColorFromType = (typ: string) => {
+  const t = typ.toLowerCase();
+  if (t.includes('rano')) return 'bg-blue-600 hover:bg-blue-700';
+  if (t.includes('środek') || t.includes('srodek')) return 'bg-amber-500 hover:bg-amber-600';
+  if (t.includes('popoł') || t.includes('popol')) return 'bg-green-600 hover:bg-green-700';
+  return 'bg-gray-600 hover:bg-gray-700';
+};
+
+const toMinutes = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map((s) => parseInt(s, 10));
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+};
+
+const parseStartMinutes = (timeStr?: string | null): number | null => {
+  if (!timeStr) return null;
+  const [h, m] = timeStr.split(':');
+  const hour = parseInt(h ?? '', 10);
+  const min = parseInt(m ?? '0', 10);
+  if (!Number.isFinite(hour)) return null;
+  return hour * 60 + (Number.isFinite(min) ? min : 0);
+};
+
+const toMondayZero = (d: Date) => (d.getDay() + 6) % 7; // 0=Mon..6=Sun
+
+const getShiftColor = (
+  dateStr: string,
+  shift: Shift,
+  params: NonNullable<CalendarViewProps['shiftParams']>
+) => {
+  const startMin = parseStartMinutes(shift.godzina_rozpoczecia ?? null);
+  const dayIdx = toMondayZero(new Date(dateStr));
+  if (startMin !== null && params && params.length > 0) {
+    const match = params.find(
+      (p) => p.dzien_tygodnia === dayIdx && startMin >= toMinutes(p.godzina_od) && startMin < toMinutes(p.godzina_do)
+    );
+    if (match) return getShiftColorFromType(match.typ_zmiany);
   }
+  // Brak dopasowania w konfiguracji → neutralny kolor, aby ujawnić brak mapowania
+  return 'bg-gray-600 hover:bg-gray-700';
 };
 
-const CalendarView = ({ scheduleData, onDrop, onDragStart, onDragEnd }: CalendarViewProps) => {
+const CalendarView = ({ scheduleData, onDrop, onDragStart, onDragEnd, shiftParams = [] }: CalendarViewProps) => {
   if (!scheduleData || scheduleData.length === 0) {
     return <div className="flex-1 p-4 text-center">Brak danych do wyświetlenia grafiku.</div>;
   }
@@ -94,7 +132,13 @@ const CalendarView = ({ scheduleData, onDrop, onDragStart, onDragEnd }: Calendar
                         draggable
                         onDragStart={() => onDragStart(entry.id)}
                         onDragEnd={onDragEnd}
-                        className={`text-xs text-white p-1 rounded-md cursor-move ${getShiftColor(shift.nazwa_zmiany)}`}
+                        className={`text-xs text-white p-1 rounded-md cursor-move ${
+                          entry?.validationError
+                            ? 'bg-red-600 hover:bg-red-700'
+                            : entry?.isLead
+                              ? 'bg-orange-500 hover:bg-orange-600'
+                              : getShiftColor(day.date, shift, shiftParams)
+                        }`}
                       >
                         {entry.pracownik?.imie} {entry.pracownik?.nazwisko?.[0]}.
                       </div>

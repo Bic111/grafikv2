@@ -4,15 +4,15 @@
  */
 export interface Absence {
   /** Unique identifier for the absence record */
-  id: string;
+  id: number;
   /** ID of the employee who is absent */
-  pracownik_id: string;
+  pracownik_id: number;
   /** Start date of the absence (ISO 8601 format) */
   data_od: string;
   /** End date of the absence (ISO 8601 format) */
   data_do: string;
   /** Type of absence */
-  typ: 'urlop' | 'zwolnienie' | 'inne';
+  typ_nieobecnosci: 'urlop' | 'zwolnienie' | 'inne';
   /** Reason or notes for the absence */
   powód?: string;
   /** Additional notes (e.g., sick leave certificate number) */
@@ -49,9 +49,9 @@ export type UpdateAbsenceInput = Partial<CreateAbsenceInput>;
  */
 export interface AbsenceFilterParams {
   /** Filter by absence type */
-  typ?: 'urlop' | 'zwolnienie' | 'inne';
+  typ_nieobecnosci?: 'urlop' | 'zwolnienie' | 'inne';
   /** Filter by employee ID */
-  pracownik_id?: string;
+  pracownik_id?: number;
   /** Filter by year */
   rok?: number;
   /** Filter by month */

@@ -125,6 +125,12 @@ const createInitialDayFormData = (day: 0 | 1 | 2 | 3 | 4 | 5 | 6): DayFormData =
  * - T016/T017: Confirmation dialogs for deletion (saved shifts only)
  * - T018: Validates minimum 3 shifts per category (Rano, Środek, Popołudnie)
  * - T019: Disables save button during submission (prevent double-submit)
+ * - NEW: "Zastosuj Pon/Wt do pozostałych dni" button for bulk configuration
+ *   - Copies Monday shifts to Wed-Fri (days 2,3,4)
+ *   - Copies Tuesday shifts to Sat-Sun (days 5,6)
+ *   - All copied shifts are created as new entries (no id)
+ *   - Auto-saves all modified days after copying
+ *   - Confirmation dialog before applying changes
  *
  * **Architecture:**
  * - Per-day form instances managed via useRef + useMemo (avoids hooks-in-map violation)
@@ -138,6 +144,8 @@ const createInitialDayFormData = (day: 0 | 1 | 2 | 3 | 4 | 5 | 6): DayFormData =
  * - dayStates: UI state (expanded, saving, error, success) per day
  * - globalError: API load errors
  * - confirmDelete: Shift deletion confirmation dialog state
+ * - confirmBulk: Bulk apply confirmation dialog state
+ * - isBulkApplying: Bulk operation in progress flag
  *
  * **Error Handling:**
  * - Load errors displayed globally
@@ -146,19 +154,52 @@ const createInitialDayFormData = (day: 0 | 1 | 2 | 3 | 4 | 5 | 6): DayFormData =
  * - Network timeout messages via getErrorMessage()
  */
 export function ParametryZmianTab(): JSX.Element {
-  // Initialize forms for each day (must be done outside useState)
-  const formsRef = React.useRef<Record<number, ReturnType<typeof useForm<DayFormData>>>>({});
-  React.useMemo(() => {
-    DAY_NAMES.forEach((_, index) => {
-      if (!formsRef.current[index]) {
-        formsRef.current[index] = useForm<DayFormData>({
-          resolver: zodResolver(dayFormSchema),
-          defaultValues: createInitialDayFormData(index as 0 | 1 | 2 | 3 | 4 | 5 | 6),
-          mode: 'onBlur',
-        });
-      }
-    });
-  }, []);
+  // Initialize forms for each day on top level using individual hooks
+  const form0 = useForm<DayFormData>({
+    resolver: zodResolver(dayFormSchema),
+    defaultValues: createInitialDayFormData(0),
+    mode: 'onBlur',
+  });
+  const form1 = useForm<DayFormData>({
+    resolver: zodResolver(dayFormSchema),
+    defaultValues: createInitialDayFormData(1),
+    mode: 'onBlur',
+  });
+  const form2 = useForm<DayFormData>({
+    resolver: zodResolver(dayFormSchema),
+    defaultValues: createInitialDayFormData(2),
+    mode: 'onBlur',
+  });
+  const form3 = useForm<DayFormData>({
+    resolver: zodResolver(dayFormSchema),
+    defaultValues: createInitialDayFormData(3),
+    mode: 'onBlur',
+  });
+  const form4 = useForm<DayFormData>({
+    resolver: zodResolver(dayFormSchema),
+    defaultValues: createInitialDayFormData(4),
+    mode: 'onBlur',
+  });
+  const form5 = useForm<DayFormData>({
+    resolver: zodResolver(dayFormSchema),
+    defaultValues: createInitialDayFormData(5),
+    mode: 'onBlur',
+  });
+  const form6 = useForm<DayFormData>({
+    resolver: zodResolver(dayFormSchema),
+    defaultValues: createInitialDayFormData(6),
+    mode: 'onBlur',
+  });
+
+  const formsRef = React.useRef<Record<number, ReturnType<typeof useForm<DayFormData>>>>({
+    0: form0,
+    1: form1,
+    2: form2,
+    3: form3,
+    4: form4,
+    5: form5,
+    6: form6,
+  });
 
   const [dayStates, setDayStates] = React.useState<Record<number, Omit<DayFormState, 'form'>>>(() => {
     const initial: Record<number, Omit<DayFormState, 'form'>> = {};
@@ -178,6 +219,8 @@ export function ParametryZmianTab(): JSX.Element {
     day: number;
     shiftId: string;
   } | null>(null);
+  const [confirmBulk, setConfirmBulk] = React.useState(false);
+  const [isBulkApplying, setIsBulkApplying] = React.useState(false);
 
   /**
    * T020: Load shift parameters on component mount using GET /shift-parameters
@@ -371,13 +414,20 @@ export function ParametryZmianTab(): JSX.Element {
       const formData = form.getValues();
       const combined = [...formData.defaultShifts, ...formData.leadShifts];
 
-      // T023: Separate into new shifts (no id) and existing shifts (with id)
-      const createPayload = combined.filter((entry) => !entry.id);
-      const updatePayload = combined.filter((entry) => entry.id);
+      // Helper: detect if shift is "empty" (both times empty or liczba_obsad==0 and times empty)
+      const isEmptyShift = (e: typeof combined[number]) =>
+        (!e.godzina_od || e.godzina_od === '') && (!e.godzina_do || e.godzina_do === '');
+
+      // T023: Prepare create/update/delete sets
+      const toCreate = combined.filter((e) => !e.id && !isEmptyShift(e));
+      const toUpdate = combined.filter((e) => e.id && !isEmptyShift(e));
+      const toDelete = combined.filter((e) => e.id && isEmptyShift(e));
 
       // T024: Execute all requests in parallel using Promise.all()
       const requests = [
-        ...createPayload.map((entry) =>
+        // Deletes first to avoid conflicts
+        ...toDelete.map((e) => shiftParameterAPI.delete(e.id!)),
+        ...toCreate.map((entry) =>
           shiftParameterAPI.create({
             dzien_tygodnia: day,
             typ_zmiany: entry.typ_zmiany as 'Rano' | 'Środek' | 'Popoludniu',
@@ -387,7 +437,7 @@ export function ParametryZmianTab(): JSX.Element {
             czy_prowadzacy: entry.czy_prowadzacy,
           }),
         ),
-        ...updatePayload.map((entry) =>
+        ...toUpdate.map((entry) =>
           shiftParameterAPI.update(entry.id!, {
             dzien_tygodnia: day,
             typ_zmiany: entry.typ_zmiany as 'Rano' | 'Środek' | 'Popoludniu',
@@ -447,6 +497,70 @@ export function ParametryZmianTab(): JSX.Element {
     }
   };
 
+  /**
+   * Zastosuj wzorce z Poniedziałku (0) i Wtorku (1) do pozostałych dni
+   * - Dla dni 2,3,4 kopiujemy ustawienia z Poniedziałku
+   * - Dla dni 5,6 kopiujemy ustawienia z Wtorku
+   * Wszystkie nowe wpisy są tworzone jako nowe (bez id), następnie zapisywane do backendu.
+   */
+  const applyMonTueToRest = async () => {
+    try {
+      setIsBulkApplying(true);
+      // Źródła
+      const weekdayForm = formsRef.current[0];
+      const weekendForm = formsRef.current[1];
+      if (!weekdayForm || !weekendForm) return;
+
+      const srcWeekday = weekdayForm.getValues();
+      const srcWeekend = weekendForm.getValues();
+
+      // Pomocnicze kopiowanie wpisów dla wybranego dnia
+      const copyShiftsForDay = (
+        source: { defaultShifts: ShiftFormValue[]; leadShifts: ShiftFormValue[] },
+        targetDay: 0 | 1 | 2 | 3 | 4 | 5 | 6,
+      ) => {
+        const mapEntry = (entry: ShiftFormValue): ShiftFormValue => ({
+          localId: createLocalId(),
+          id: undefined,
+          dzien_tygodnia: targetDay,
+          typ_zmiany: entry.typ_zmiany,
+          godzina_od: entry.godzina_od,
+          godzina_do: entry.godzina_do,
+          liczba_obsad: entry.liczba_obsad,
+          czy_prowadzacy: entry.czy_prowadzacy,
+        });
+
+        const defaultShifts = ensureBaseShifts(
+          source.defaultShifts.map(mapEntry),
+          targetDay,
+          false,
+        );
+        const leadShifts = ensureBaseShifts(
+          source.leadShifts.map(mapEntry),
+          targetDay,
+          true,
+        );
+        const targetForm = formsRef.current[targetDay];
+        targetForm?.reset({ defaultShifts, leadShifts });
+      };
+
+      // Dni robocze (Śr, Czw, Pt) = 2,3,4
+      [2, 3, 4].forEach((day) => copyShiftsForDay(srcWeekday, day as 0 | 1 | 2 | 3 | 4 | 5 | 6));
+      // Weekend (Sb, Nd) = 5,6
+      [5, 6].forEach((day) => copyShiftsForDay(srcWeekend, day as 0 | 1 | 2 | 3 | 4 | 5 | 6));
+
+      // Zapisz wszystkie zmienione dni
+      for (const day of [2, 3, 4, 5, 6] as const) {
+        // Trigger walidacji i zapisu
+        await handleSaveDay(day);
+      }
+    } catch (error) {
+      setGlobalError(getErrorMessage(error));
+    } finally {
+      setIsBulkApplying(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="rounded-lg border border-gray-200 bg-white p-8">
@@ -465,6 +579,17 @@ export function ParametryZmianTab(): JSX.Element {
       </div>
 
       {globalError && <ErrorMessage message={globalError} />}
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setConfirmBulk(true)}
+          disabled={isBulkApplying}
+          className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-400"
+        >
+          {isBulkApplying ? 'Zastosowywanie…' : 'Zastosuj Pon/Wt do pozostałych dni'}
+        </button>
+      </div>
 
       <div className="space-y-4">
         {DAY_NAMES.map((dayName, dayIndex) => {
@@ -504,6 +629,21 @@ export function ParametryZmianTab(): JSX.Element {
           isDestructive
           onConfirm={() => confirmDeleteShift(confirmDelete.day as 0 | 1 | 2 | 3 | 4 | 5 | 6, confirmDelete.shiftId)}
           onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+
+      {confirmBulk && (
+        <ConfirmDialog
+          isOpen
+          title="Zastosuj ustawienia Pon/Wt do pozostałych dni"
+          message="Skopiujemy ustawienia z Poniedziałku na Śr-Pt oraz z Wtorku na Sb-Nd i zapiszemy je. Kontynuować?"
+          confirmLabel="Zastosuj i zapisz"
+          cancelLabel="Anuluj"
+          onConfirm={async () => {
+            setConfirmBulk(false);
+            await applyMonTueToRest();
+          }}
+          onCancel={() => setConfirmBulk(false)}
         />
       )}
     </div>

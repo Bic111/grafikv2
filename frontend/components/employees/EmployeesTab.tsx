@@ -38,7 +38,11 @@ export function EmployeesTab({ focusId }: EmployeesTabProps): JSX.Element {
       setIsLoading(true);
       setError(null);
       const data = await employeeAPI.getAll();
-      setEmployees(data);
+      // Sortuj alfabetycznie po nazwisku (polskie locale, case-insensitive)
+      const sorted = [...data].sort((a, b) =>
+        a.nazwisko.localeCompare(b.nazwisko, 'pl', { sensitivity: 'base' })
+      );
+      setEmployees(sorted);
 
       // Focus on specific employee if requested
       if (focusId) {
@@ -166,9 +170,14 @@ export function EmployeesTab({ focusId }: EmployeesTabProps): JSX.Element {
       {isLoading ? (
         <TableSkeleton columnCount={5} rowCount={5} />
       ) : (
-        <Table<Employee>
-          data={employees}
+        <Table<Employee & { lp: number }>
+          data={employees.map((e, i) => ({ ...e, lp: i + 1 }))}
           columns={[
+            {
+              key: 'lp',
+              label: 'Lp.',
+              className: 'w-14',
+            },
             {
               key: 'imie_nazwisko',
               label: 'Imię i nazwisko',

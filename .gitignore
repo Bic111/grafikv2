@@ -22,3 +22,10 @@ Thumbs.db
 .idea/
 playwright-report/
 test-results/
+
+.gemini/
+gha-creds-*.json
+
+# Sensitive files - credentials
+Nowy folder/
+*.db

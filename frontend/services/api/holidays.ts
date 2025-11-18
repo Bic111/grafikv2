@@ -19,42 +19,42 @@ class HolidayAPI extends ApiClient {
    */
   async getAll(filters?: HolidayFilterParams): Promise<Holiday[]> {
     const query = this.buildQueryString(filters);
-    return this.get<Holiday[]>(`/api/holidays${query}`);
+    return this.get<Holiday[]>(`/api/swieta${query}`);
   }
 
   /**
    * Get a single holiday by ID
    */
   async getById(id: string): Promise<Holiday> {
-    return this.get<Holiday>(`/api/holidays/${id}`);
+    return this.get<Holiday>(`/api/swieta/${id}`);
   }
 
   /**
    * Create a new holiday
    */
   async create(data: CreateHolidayInput): Promise<Holiday> {
-    return this.post<Holiday>('/api/holidays', data);
+    return this.post<Holiday>('/api/swieta', data);
   }
 
   /**
    * Update an existing holiday
    */
   async update(id: string, data: UpdateHolidayInput): Promise<Holiday> {
-    return this.put<Holiday>(`/api/holidays/${id}`, data);
+    return this.put<Holiday>(`/api/swieta/${id}`, data);
   }
 
   /**
    * Delete a holiday
    */
   async delete(id: string): Promise<void> {
-    return super.delete<void>(`/api/holidays/${id}`);
+    return super.delete<void>(`/api/swieta/${id}`);
   }
 
   /**
    * Get holidays for a specific year
    */
   async getByYear(rok: number): Promise<Holiday[]> {
-    return this.get<Holiday[]>(`/api/holidays?rok=${rok}`);
+    return this.get<Holiday[]>(`/api/swieta?rok=${rok}`);
   }
 
   /**
@@ -62,7 +62,7 @@ class HolidayAPI extends ApiClient {
    */
   async getByMonth(rok: number, miesiac: number): Promise<Holiday[]> {
     return this.get<Holiday[]>(
-      `/api/holidays?rok=${rok}&miesiac=${miesiac}`
+      `/api/swieta?rok=${rok}&miesiac=${miesiac}`
     );
   }
 

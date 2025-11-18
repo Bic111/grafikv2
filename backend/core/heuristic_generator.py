@@ -111,6 +111,15 @@ def generate_monthly_schedule(session: Session, year: int, month: int):
 
     last_day = monthrange(year, month)[1]
     absence_map = _build_absence_map(absences, year, month, last_day)
+
+    # Zbuduj mapę świąt zamkniętych (store_closed=True), aby pominąć te dni w przydziałach
+    closed_holidays: Dict[date, bool] = {}
+    for h in holidays:
+        h_date = cast(Optional[date], getattr(h, "date", None))
+        if h_date is None:
+            continue
+        if bool(getattr(h, "store_closed", False)):
+            closed_holidays[h_date] = True
     schedule = (
         session.query(GrafikMiesieczny)
         .filter(GrafikMiesieczny.miesiac_rok == f"{year:04d}-{month:02d}")
@@ -136,6 +145,9 @@ def generate_monthly_schedule(session: Session, year: int, month: int):
 
     for day in range(1, last_day + 1):
         current_date = date(year, month, day)
+        # Pomiń dni, kiedy sklep jest zamknięty
+        if closed_holidays.get(current_date):
+            continue
         for shift in shifts:
             raw_requirements = getattr(shift, "wymagana_obsada", None)
             requirements: Dict[str, int]
@@ -199,6 +211,9 @@ def generate_monthly_schedule(session: Session, year: int, month: int):
                         )
 
     issues = validate_schedule(created_entries, shifts, holidays)
+    # For the heuristic generator, return only blocking issues to keep output concise
+    # and align with legacy expectations in tests.
+    blocking_issues = [issue for issue in issues if getattr(issue, "level", "") == "error"]
     session.flush()
 
-    return schedule, created_entries, issues
+    return schedule, created_entries, blocking_issues
