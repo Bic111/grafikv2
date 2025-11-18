@@ -1,0 +1,275 @@
+openapi: 3.0.0
+info:
+  title: Shift Parameters API
+  version: 1.0.0
+  description: API for managing shift parameter configurations per day of week
+
+servers:
+  - url: /api
+    description: API base URL
+
+paths:
+  /shift-parameters:
+    get:
+      summary: Get all shift parameters
+      tags:
+        - Shift Parameters
+      parameters:
+        - name: day
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 6
+          description: Filter by day of week (0=Monday, 6=Sunday)
+        - name: typ_zmiany
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - Rano
+              - Środek
+              - Popoludniu
+          description: Filter by shift type
+      responses:
+        '200':
+          description: List of shift parameters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShiftParameter'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create a new shift parameter
+      tags:
+        - Shift Parameters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShiftParameterRequest'
+      responses:
+        '201':
+          description: Shift parameter created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShiftParameter'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /shift-parameters/{id}:
+    get:
+      summary: Get shift parameter by ID
+      tags:
+        - Shift Parameters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Shift parameter found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShiftParameter'
+        '404':
+          description: Shift parameter not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update shift parameter
+      tags:
+        - Shift Parameters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateShiftParameterRequest'
+      responses:
+        '200':
+          description: Shift parameter updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShiftParameter'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Shift parameter not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete shift parameter
+      tags:
+        - Shift Parameters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Shift parameter deleted successfully
+        '404':
+          description: Shift parameter not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ShiftParameter:
+      type: object
+      required:
+        - id
+        - dzien_tygodnia
+        - typ_zmiany
+        - godzina_od
+        - godzina_do
+      properties:
+        id:
+          type: integer
+          description: Unique identifier
+        dzien_tygodnia:
+          type: integer
+          minimum: 0
+          maximum: 6
+          description: Day of week (0=Monday, 6=Sunday)
+        typ_zmiany:
+          type: string
+          enum:
+            - Rano
+            - Środek
+            - Popoludniu
+          description: Type of shift
+        godzina_od:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+          example: "09:00"
+          description: Shift start time (HH:MM format)
+        godzina_do:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+          example: "17:00"
+          description: Shift end time (HH:MM format)
+        liczba_obsad:
+          type: integer
+          minimum: 0
+          description: Number of positions to fill
+        czy_prowadzacy:
+          type: boolean
+          default: false
+          description: Whether this is a shift lead position
+        utworzono:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        zaktualizowano:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    CreateShiftParameterRequest:
+      type: object
+      required:
+        - dzien_tygodnia
+        - typ_zmiany
+        - godzina_od
+        - godzina_do
+      properties:
+        dzien_tygodnia:
+          type: integer
+          minimum: 0
+          maximum: 6
+        typ_zmiany:
+          type: string
+          enum:
+            - Rano
+            - Środek
+            - Popoludniu
+        godzina_od:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        godzina_do:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        liczba_obsad:
+          type: integer
+          minimum: 0
+          default: 0
+        czy_prowadzacy:
+          type: boolean
+          default: false
+
+    UpdateShiftParameterRequest:
+      type: object
+      properties:
+        dzien_tygodnia:
+          type: integer
+          minimum: 0
+          maximum: 6
+        typ_zmiany:
+          type: string
+          enum:
+            - Rano
+            - Środek
+            - Popoludniu
+        godzina_od:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        godzina_do:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        liczba_obsad:
+          type: integer
+          minimum: 0
+        czy_prowadzacy:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+        details:
+          type: object

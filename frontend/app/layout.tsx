@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Sidebar from "../components/Sidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WorkSchedule",
-  description: "Platform do zarządzania grafikami pracy",
+  title: "WorkSchedule PL",
+  description: "Aplikacja do zarządzania grafikiem pracy",
 };
 
 export default function RootLayout({
@@ -26,38 +26,11 @@ export default function RootLayout({
   return (
     <html lang="pl">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-slate-50 antialiased`}
+        suppressHydrationWarning
+        className={`${geistSans.variable} ${geistMono.variable} flex bg-gray-900 text-white antialiased`}
       >
-        <div className="min-h-screen">
-          <header className="border-b bg-white">
-            <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-              <Link href="/" className="text-lg font-semibold">
-                WorkSchedule
-              </Link>
-              <nav
-                className="flex items-center gap-4 text-sm font-medium text-slate-600"
-                aria-label="Główna nawigacja"
-              >
-                <Link className="transition hover:text-blue-600" href="/employees">
-                  Pracownicy
-                </Link>
-                <Link className="transition hover:text-blue-600" href="/settings">
-                  Ustawienia
-                </Link>
-                <Link className="transition hover:text-blue-600" href="/generator">
-                  Generator
-                </Link>
-                <Link className="transition hover:text-blue-600" href="/schedule">
-                  Grafik
-                </Link>
-                <Link className="transition hover:text-blue-600" href="/absences">
-                  Nieobecności
-                </Link>
-              </nav>
-            </div>
-          </header>
-          <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
-        </div>
+        <Sidebar />
+        <main className="flex-grow p-6">{children}</main>
       </body>
     </html>
   );

@@ -15,12 +15,21 @@ bp = Blueprint("employees", __name__)
 
 
 def serialize_employee(employee: Pracownik) -> Dict[str, Any]:
+    """Serialize employee ensuring canonical JSON key with diacritic.
+
+    We keep the DB/ORM field name `limit_godzin_miesieczny` (ASCII) but expose
+    the canonical API key `limit_godzin_miesięczny` for consistency with frontend.
+    For backward compatibility we ALSO include the legacy key once during the
+    transition (could be removed later)."""
     return {
         "id": employee.id,
         "imie": employee.imie,
         "nazwisko": employee.nazwisko,
         "rola_id": employee.rola_id,
         "etat": employee.etat,
+        # canonical key
+        "limit_godzin_miesięczny": employee.limit_godzin_miesieczny,
+        # temporary legacy key (can be deprecated later)
         "limit_godzin_miesieczny": employee.limit_godzin_miesieczny,
         "preferencje": employee.preferencje,
         "data_zatrudnienia": employee.data_zatrudnienia.isoformat()
@@ -44,12 +53,21 @@ def create_employee():
     if missing:
         return jsonify(response_message("Missing required fields", missing=missing)), 400
 
+    # Accept both legacy and canonical key names
+    limit_miesieczny = payload.get("limit_godzin_miesięczny")
+    if limit_miesieczny is None:
+        limit_miesieczny = payload.get("limit_godzin_miesieczny")
+
+    etat_value = payload.get("etat")
+    if etat_value is not None:
+        etat_value = float(etat_value)
+    
     employee = Pracownik(
         imie=payload["imie"],
         nazwisko=payload["nazwisko"],
         rola_id=payload.get("rola_id"),
-        etat=payload.get("etat"),
-        limit_godzin_miesieczny=payload.get("limit_godzin_miesieczny"),
+        etat=etat_value,
+        limit_godzin_miesieczny=limit_miesieczny,
         preferencje=payload.get("preferencje"),
         data_zatrudnienia=parse_date(payload.get("data_zatrudnienia")),
     )
@@ -89,16 +107,19 @@ def update_employee(employee_id: int):
         if not employee:
             return jsonify(response_message("Employee not found")), 404
 
-        for attr in [
-            "imie",
-            "nazwisko",
-            "rola_id",
-            "etat",
-            "limit_godzin_miesieczny",
-            "preferencje",
-        ]:
+        # Map canonical key to internal legacy field name if present
+        if "limit_godzin_miesięczny" in payload and "limit_godzin_miesieczny" not in payload:
+            payload["limit_godzin_miesieczny"] = payload["limit_godzin_miesięczny"]
+
+        for attr in ["imie", "nazwisko", "rola_id", "limit_godzin_miesieczny", "preferencje"]:
             if attr in payload:
                 setattr(employee, attr, payload.get(attr))
+        
+        # Handle etat conversion explicitly
+        if "etat" in payload:
+            etat_value = payload.get("etat")
+            if etat_value is not None:
+                employee.etat = float(etat_value)
 
         if "data_zatrudnienia" in payload:
             employee.data_zatrudnienia = parse_date(payload.get("data_zatrudnienia"))

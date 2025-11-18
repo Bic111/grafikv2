@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from datetime import datetime, date
+from time import time
 
 from flask import Blueprint, jsonify, request
 from sqlalchemy.orm import selectinload
 
-from ..core.generator import GenerationError, generate_monthly_schedule
+from ..core.generator import GenerationError
+from ..core.heuristic_generator import generate_monthly_schedule as heuristic_generate
+from ..core.ortools_generator import OrToolsGenerator
 from ..database import session_scope
-from ..models import GrafikEntry, GrafikMiesieczny, Nieobecnosc, Zmiana, Pracownik
+from ..models import GrafikEntry, GrafikMiesieczny, Nieobecnosc, Zmiana, Pracownik, Holiday
 from ..services.walidacja import validate_schedule
 from .utils import response_message
 
@@ -70,6 +73,14 @@ def generate_schedule():
     payload = request.get_json(silent=True) or {}
     month = payload.get("month")
     year = payload.get("year")
+    generator_type = payload.get("generator_type", "heuristic")  # "heuristic" or "ortools"
+    scenario_type = payload.get("scenario_type", "DEFAULT")  # For OR-Tools: DEFAULT, NIGHT_FOCUS, etc.
+
+    # Validate generator_type
+    if generator_type not in ["heuristic", "ortools"]:
+        return jsonify(response_message(
+            "Parametr 'generator_type' musi być 'heuristic' lub 'ortools'"
+        )), 400
 
     try:
         if not month or not year:
@@ -83,9 +94,37 @@ def generate_schedule():
 
     with session_scope() as session:
         try:
-            schedule, entries, issues = generate_monthly_schedule(session, year, month)
+            # Measure generation time
+            start_time = time()
+            
+            if generator_type == "ortools":
+                # Use OR-Tools generator
+                try:
+                    generator = OrToolsGenerator(session, year, month, scenario_type)
+                except ImportError as imp_err:
+                    return jsonify(response_message(
+                        "Środowisko nie ma zainstalowanej biblioteki OR-Tools",
+                        error=str(imp_err),
+                    )), 500
+                schedule, entries, issues = generator.generate()
+                runtime_ms = int((time() - start_time) * 1000)
+            else:
+                # Use heuristic generator
+                schedule, entries, issues = heuristic_generate(session, year, month)
+                runtime_ms = int((time() - start_time) * 1000)
+                
         except GenerationError as exc:
             return jsonify(response_message("Nie można wygenerować grafiku", error=str(exc))), 400
+        except Exception as exc:
+            # Bezpieczny fallback błędów nieprzewidzianych z dodaniem typu wyjątku
+            import os
+            import traceback
+            error_text = f"{exc.__class__.__name__}: {str(exc)}"
+            payload = response_message("Nieznany błąd podczas generowania grafiku", error=error_text)
+            if os.getenv("FLASK_DEBUG", "0") == "1":
+                payload["trace"] = traceback.format_exc()
+            return jsonify(payload), 500
+            
         shifts = session.query(Zmiana).all()
         absences = session.query(Nieobecnosc).all()
 
@@ -93,6 +132,18 @@ def generate_schedule():
         serialized["issues"] = [issue.__dict__ for issue in issues]
         serialized["shifts"] = _serialize_shifts(shifts)
         serialized["absences"] = _serialize_absences(absences)
+        
+        # Add diagnostics
+        serialized["diagnostics"] = {
+            "generator_type": generator_type,
+            "scenario_type": scenario_type if generator_type == "ortools" else None,
+            "runtime_ms": runtime_ms,
+            "entry_count": len(entries),
+            "issue_count": len(issues),
+            "blocking_issues": len([i for i in issues if i.level == "error"]),
+            "warning_issues": len([i for i in issues if i.level == "warning"]),
+        }
+        
         return jsonify(serialized), 200
 
 
@@ -118,6 +169,47 @@ def latest_schedule():
         data = _serialize_schedule(schedule, entries)
         data["shifts"] = _serialize_shifts(shifts)
         data["absences"] = _serialize_absences(session.query(Nieobecnosc).all())
+        return jsonify(data)
+
+
+@bp.get("/grafiki/miesiac/<string:month>")
+def get_schedule_by_month(month: str):
+    """
+    Get schedule for specific month (format: YYYY-MM).
+    
+    Args:
+        month: Month in format YYYY-MM (e.g., "2025-11")
+    
+    Returns:
+        Schedule with entries, shifts, absences or 404 if not found
+    """
+    with session_scope() as session:
+        schedule = (
+            session.query(GrafikMiesieczny)
+            .filter(GrafikMiesieczny.miesiac_rok == month)
+            .order_by(GrafikMiesieczny.data_utworzenia.desc())
+            .first()
+        )
+        
+        if not schedule:
+            return jsonify(response_message(f"Brak grafiku dla {month}")), 404
+
+        entries = (
+            session.query(GrafikEntry)
+            .filter(GrafikEntry.grafik_miesieczny_id == schedule.id)
+            .options(
+                selectinload(GrafikEntry.pracownik).selectinload(Pracownik.rola),
+                selectinload(GrafikEntry.zmiana),
+            )
+            .order_by(GrafikEntry.data, GrafikEntry.zmiana_id)
+            .all()
+        )
+        shifts = session.query(Zmiana).all()
+        absences = session.query(Nieobecnosc).all()
+
+        data = _serialize_schedule(schedule, entries)
+        data["shifts"] = _serialize_shifts(shifts)
+        data["absences"] = _serialize_absences(absences)
         return jsonify(data)
 
 
@@ -164,7 +256,23 @@ def update_schedule(schedule_id: int):
         )
         shifts = session.query(Zmiana).all()
         absences = session.query(Nieobecnosc).all()
-        issues = validate_schedule(entries, shifts)
+        
+        # Fetch holidays for the schedule month
+        try:
+            year, month = map(int, schedule.miesiac_rok.split('-'))
+            from calendar import monthrange
+            month_start = date(year, month, 1)
+            last_day = monthrange(year, month)[1]
+            month_end = date(year, month, last_day)
+            holidays = (
+                session.query(Holiday)
+                .filter(Holiday.date >= month_start, Holiday.date <= month_end)
+                .all()
+            )
+        except (ValueError, AttributeError):
+            holidays = []
+        
+        issues = validate_schedule(entries, shifts, holidays)
 
         serialized = _serialize_schedule(schedule, entries)
         serialized["issues"] = [issue.__dict__ for issue in issues]

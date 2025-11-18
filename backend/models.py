@@ -10,10 +10,58 @@ from sqlalchemy import (
     Time,
 )
 from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy.types import JSON, Text
+from sqlalchemy.types import JSON, Text, Boolean
+from sqlalchemy import Float
+from datetime import datetime
 
 
 Base = declarative_base()
+
+
+class LaborLawRule(Base):
+    __tablename__ = 'labor_law_rules'
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(120), nullable=False, unique=True)
+    name = Column(String(255), nullable=False)
+    category = Column(String(80), nullable=False)
+    severity = Column(String(40), nullable=False)
+    parameters = Column(JSON, nullable=True)
+    description = Column(Text, nullable=True)
+    active_from = Column(Date, nullable=True)
+    active_to = Column(Date, nullable=True)
+
+
+class Holiday(Base):
+    __tablename__ = 'holidays'
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, nullable=False, unique=True)
+    name = Column(String(120), nullable=False)
+    coverage_overrides = Column(JSON, nullable=True)
+    store_closed = Column(Boolean, default=False)
+
+
+class StaffingRequirementTemplate(Base):
+    __tablename__ = 'staffing_requirement_templates'
+    id = Column(Integer, primary_key=True, index=True)
+    day_type = Column(String(80), nullable=False)
+    shift_id = Column(Integer, ForeignKey('zmiany.id'), nullable=False)
+    role_id = Column(Integer, ForeignKey('role.id'), nullable=False)
+    min_staff = Column(Integer, default=0)
+    target_staff = Column(Integer, default=0)
+    max_staff = Column(Integer, nullable=True)
+    effective_from = Column(Date, nullable=True)
+    effective_to = Column(Date, nullable=True)
+
+
+class ReportSnapshot(Base):
+    __tablename__ = 'report_snapshots'
+    id = Column(Integer, primary_key=True, index=True)
+    scenario_id = Column(Integer, ForeignKey('grafiki_miesieczne.id'), nullable=False)
+    generated_at = Column(DateTime, default=datetime.utcnow)
+    metrics = Column(JSON, nullable=True)
+    absence_summary = Column(JSON, nullable=True)
+    format = Column(String(40), nullable=False)
+    storage_path = Column(String(255), nullable=True)
 
 
 class Rola(Base):
@@ -38,7 +86,7 @@ class Pracownik(Base):
     imie = Column(String(80), nullable=False)
     nazwisko = Column(String(120), nullable=False)
     rola_id = Column(Integer, ForeignKey("role.id"), nullable=True)
-    etat = Column(String(32), nullable=True)
+    etat = Column(Float, nullable=True)
     limit_godzin_miesieczny = Column(Integer, nullable=True)
     preferencje = Column(JSON, nullable=True)
     data_zatrudnienia = Column(Date, nullable=True)
@@ -109,12 +157,17 @@ class Nieobecnosc(Base):
     pracownik = relationship("Pracownik", back_populates="nieobecnosci")
 
 
-class ParametryGeneratora(Base):
-    __tablename__ = "parametry_generatora"
+class GeneratorParameter(Base):
+    __tablename__ = "generator_parameters"
 
     id = Column(Integer, primary_key=True, index=True)
-    nazwa_parametru = Column(String(120), nullable=False, unique=True)
-    wartosc = Column(Text, nullable=False)
+    scenario_type = Column(String(80), nullable=False, unique=True)
+    weights = Column(JSON, nullable=False)
+    max_consecutive_nights = Column(Integer, nullable=True)
+    min_rest_hours_override = Column(Integer, nullable=True)
+    last_updated_by = Column(String(120), nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 
 class WzorceHistoryczne(Base):
@@ -123,3 +176,39 @@ class WzorceHistoryczne(Base):
     id = Column(Integer, primary_key=True, index=True)
     nazwa_wzorca = Column(String(120), nullable=False, unique=True)
     dane_grafiku = Column(JSON, nullable=False)
+
+
+class ParametryZmiany(Base):
+    __tablename__ = "parametry_zmiany"
+
+    id = Column(Integer, primary_key=True, index=True)
+    dzien_tygodnia = Column(Integer, nullable=False)  # 0-6 (Monday-Sunday)
+    typ_zmiany = Column(String(120), nullable=False)  # Rano, Środek, Popoludniu
+    godzina_od = Column(String(5), nullable=False)  # HH:MM format
+    godzina_do = Column(String(5), nullable=False)  # HH:MM format
+    liczba_obsad = Column(Integer, nullable=True)
+    czy_prowadzacy = Column(Boolean, default=False)
+
+
+class Rule(Base):
+    __tablename__ = 'rules'
+
+    id = Column(Integer, primary_key=True, index=True)
+    nazwa = Column(String(255), nullable=False)
+    opis = Column(Text, nullable=True)
+    typ = Column(String(80), nullable=True)
+    aktywna = Column(Boolean, default=True)
+    utworzono = Column(DateTime, default=datetime.utcnow, nullable=False)
+    zaktualizowano = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class HourLimit(Base):
+    __tablename__ = 'hour_limits'
+
+    id = Column(Integer, primary_key=True, index=True)
+    etat = Column(Float, nullable=False)
+    max_dziennie = Column(Integer, nullable=True)
+    max_tygodniowo = Column(Integer, nullable=True)
+    # DB column without diacritics; frontend normalizer handles variants
+    max_miesiecznie = Column(Integer, nullable=True)
+    max_kwartalnie = Column(Integer, nullable=True)

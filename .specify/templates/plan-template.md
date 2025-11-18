@@ -33,8 +33,8 @@
 
 - **Modularity and Reusability**: Does the proposed solution promote modularity and reusability?
 - **API-First Design**: Is the API well-defined and documented?
-- **Test-Driven Development (TDD)**: Are the tests written before the implementation?
-- **Continuous Integration and Continuous Delivery (CI/CD)**: Is the CI/CD pipeline configured for the new feature?
+- **Walidacja i zgodność z prawem pracy**: Are validation requirements aligned with Polish labour law?
+- **Optymalizacja oparta na danych**: Does the solution leverage data-driven optimization principles?
 - **Documentation**: Is the documentation updated to reflect the new feature?
 
 ## Project Structure
